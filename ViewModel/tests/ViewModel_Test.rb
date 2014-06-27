@@ -24,7 +24,7 @@ class ViewModel_Test < Test::Unit::TestCase
   end
   
   def reportPath
-    return "./report.html"
+    return "./report.json"
   end
   
   # create test files if they do not exist
