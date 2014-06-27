@@ -12,15 +12,15 @@ class ViewModel_Test < Test::Unit::TestCase
     
   # paths to expected test files, includes osm and eplusout.sql
   def modelPath
-    return "#{File.dirname(__FILE__)}/ExampleModel.osm"
+    return "#{File.dirname(__FILE__)}/SimpleModel.osm"
   end
   
   def runDir
-    return "#{File.dirname(__FILE__)}/ExampleModel/"
+    return "#{File.dirname(__FILE__)}/SimpleModel/"
   end
   
   def sqlPath
-    return "#{File.dirname(__FILE__)}/ExampleModel/ModelToIdf/EnergyPlusPreProcess-0/EnergyPlus-0/eplusout.sql"
+    return "#{File.dirname(__FILE__)}/SimpleModel/ModelToIdf/EnergyPlusPreProcess-0/EnergyPlus-0/eplusout.sql"
   end
   
   def reportPath
