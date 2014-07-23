@@ -1,11 +1,23 @@
+require 'rubygems'
 require 'json'
 
 Material = Struct.new(:uuid, :type, :color, :ambient, :emissive, :specular, :shininess, :opacity, :transparent, :wireframe, :side)
 GeometryData = Struct.new(:vertices, :normals, :uvs, :faces, :scale, :visible, :castShadow, :receiveShadow, :doubleSided)
 Geometry = Struct.new(:uuid, :type, :data)
+AmbientLight = Struct.new(:uuid, :type, :color, :matrix)
 SceneChild = Struct.new(:uuid, :name, :type, :geometry, :material, :matrix, :userData)
 SceneObject = Struct.new(:uuid, :type, :matrix, :children)
 Scene = Struct.new(:geometries, :materials, :object)
+
+if /^1\.8/.match(RUBY_VERSION)
+  class Struct
+    def to_h
+      h = {}
+      self.class.members.each{|m| h[m.to_sym] = self[m]} 
+      return h
+    end
+  end
+end
 
 #start the measure
 class ViewModel < OpenStudio::Ruleset::ReportingUserScript
@@ -38,10 +50,10 @@ class ViewModel < OpenStudio::Ruleset::ReportingUserScript
   
     material = {:uuid => "#{format_uuid(OpenStudio::createUUID)}",
                 :type => "MeshPhongMaterial",
-                :color => "#{color}",
-                :ambient => "#{color}",
-                :emissive => "0x000000",
-                :specular => "0x808080",
+                :color => "#{color}".hex,
+                :ambient => "#{color}".hex,
+                :emissive => "0x000000".hex,
+                :specular => "0x808080".hex,
                 :shininess => 50,
                 :opacity => opacity,
                 :transparent => transparent,
@@ -78,9 +90,13 @@ class ViewModel < OpenStudio::Ruleset::ReportingUserScript
   def flatten_vertices(vertices)
     result = []
     vertices.each do |vertex|
+      #result << vertex.x
+      #result << vertex.y
+      #result << vertex.z
+      
       result << vertex.x
-      result << vertex.y
       result << vertex.z
+      result << -vertex.y
     end
     return result
   end
@@ -123,6 +139,9 @@ class ViewModel < OpenStudio::Ruleset::ReportingUserScript
       vertices = site_transformation*t*vertices
       #normal = site_transformation.rotationMatrix*r*z
 
+      # https://github.com/mrdoob/three.js/wiki/JSON-Model-format-3
+      # 0 indicates triangle
+      face_indices << 0
       vertices.each do |vertex|
         face_indices << get_vertex_index(vertex, all_vertices)  
       end
@@ -242,6 +261,13 @@ class ViewModel < OpenStudio::Ruleset::ReportingUserScript
       
     end
     
+    light = AmbientLight.new
+    light.uuid = "#{format_uuid(OpenStudio::createUUID)}"
+    light.type = "AmbientLight"
+    light.color = "0x333333".hex
+    light.matrix = identity_matrix
+    object[:children] << light.to_h
+      
     scene = Scene.new
     scene.geometries = all_geometries
     scene.materials = materials
@@ -289,7 +315,7 @@ class ViewModel < OpenStudio::Ruleset::ReportingUserScript
     # write json file
     json_out_path = "./report.json"
     File.open(json_out_path, 'w') do |file|
-      file << JSON::pretty_generate(json)
+      file << JSON::generate(json, {:object_nl=>"\n", :array_nl=>"", :indent=>"  "})
       # make sure data is written to the disk one way or the other      
       begin
         file.fsync
