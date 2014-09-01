@@ -6,9 +6,9 @@ require "#{File.dirname(__FILE__)}/../measure.rb"
 
 require 'fileutils'
 
-require 'test/unit'
+require 'minitest/autorun'
 
-class ViewModel_Test < Test::Unit::TestCase
+class ViewModel_Test < MiniTest::Unit::TestCase
     
   # paths to expected test files, includes osm and eplusout.sql
   def modelPath

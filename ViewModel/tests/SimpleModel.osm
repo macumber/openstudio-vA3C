@@ -7850,3 +7850,20 @@ OS:SizingPeriod:DesignDay,
   0.424,                                  !- ASHRAE Taub {dimensionless}
   2.025;                                  !- ASHRAE Taud {dimensionless}
 
+OS:SubSurface,
+  {1ee5ae6a-e5e5-491e-bbc3-840b6cc2951b}, !- Handle
+  Sub Surface 1,                          !- Name
+  FixedWindow,                            !- Sub Surface Type
+  ,                                       !- Construction Name
+  {b96e404e-e412-4577-98f1-d1dc8357f5c2}, !- Surface Name
+  ,                                       !- Outside Boundary Condition Object
+  ,                                       !- View Factor to Ground
+  ,                                       !- Shading Control Name
+  ,                                       !- Frame and Divider Name
+  ,                                       !- Multiplier
+  ,                                       !- Number of Vertices
+  0, 5.20468860396069, 2.45998531546624,  !- X,Y,Z Vertex 1 {m}
+  0, 5.20468860396069, 1.13283531546624,  !- X,Y,Z Vertex 2 {m}
+  0, 3.15681360396069, 1.13283531546624,  !- X,Y,Z Vertex 3 {m}
+  0, 3.15681360396069, 2.45998531546624;  !- X,Y,Z Vertex 4 {m}
+

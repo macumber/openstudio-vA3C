@@ -141,6 +141,7 @@ class ViewModel < OpenStudio::Ruleset::ReportingUserScript
 
       # https://github.com/mrdoob/three.js/wiki/JSON-Model-format-3
       # 0 indicates triangle
+      # 16 indicates triangle with normals
       face_indices << 0
       vertices.each do |vertex|
         face_indices << get_vertex_index(vertex, all_vertices)  
@@ -179,7 +180,11 @@ class ViewModel < OpenStudio::Ruleset::ReportingUserScript
       triangles.each do |vertices|
         vertices = site_transformation*t*vertices
         #normal = site_transformation.rotationMatrix*r*z
-
+        
+        # https://github.com/mrdoob/three.js/wiki/JSON-Model-format-3
+        # 0 indicates triangle
+        # 16 indicates triangle with normals
+        face_indices << 0
         vertices.each do |vertex|
           face_indices << get_vertex_index(vertex, all_vertices)  
         end    
@@ -264,7 +269,7 @@ class ViewModel < OpenStudio::Ruleset::ReportingUserScript
     light = AmbientLight.new
     light.uuid = "#{format_uuid(OpenStudio::createUUID)}"
     light.type = "AmbientLight"
-    light.color = "0x333333".hex
+    light.color = "0xFFFFFF".hex
     light.matrix = identity_matrix
     object[:children] << light.to_h
       
