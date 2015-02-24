@@ -115,13 +115,13 @@ class Va3c
     t = OpenStudio::Transformation::alignFace(surface_vertices)
     r = t.rotationMatrix
     tInv = t.inverse
-    surface_vertices = tInv*surface_vertices
+    surface_vertices = OpenStudio::reverse(tInv*surface_vertices)
 
     # get vertices of all sub surfaces
     sub_surface_vertices = OpenStudio::Point3dVectorVector.new
     sub_surfaces = surface.subSurfaces
     sub_surfaces.each do |sub_surface|
-      sub_surface_vertices << tInv*sub_surface.vertices
+      sub_surface_vertices << OpenStudio::reverse(tInv*sub_surface.vertices)
     end
 
     # triangulate surface
@@ -170,7 +170,7 @@ class Va3c
     sub_surfaces.each do |sub_surface|
    
       # triangulate sub surface
-      sub_surface_vertices = tInv*sub_surface.vertices
+      sub_surface_vertices = OpenStudio::reverse(tInv*sub_surface.vertices)
       triangles = OpenStudio::computeTriangulation(sub_surface_vertices, OpenStudio::Point3dVectorVector.new)
       
       all_vertices = []

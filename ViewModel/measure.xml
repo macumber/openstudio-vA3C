@@ -1,9 +1,14 @@
 <measure>
-  <name>ViewModel</name>
+  <schema_version>3.0</schema_version>
+  <name>view_model</name>
   <uid>f4669f10-fda5-489d-8e1c-7ca3c2d40378</uid>
-  <version_id>83124041-76f2-4dd0-8b5e-e4268515238c</version_id>
+  <version_id>dca5db00-1133-4ce2-ac86-69d9ceb5ca57</version_id>
+  <xml_checksum>2C8A3EEF</xml_checksum>
+  <class_name>ViewModel</class_name>
+  <display_name>ViewModel</display_name>
   <description>Exports the OpenStudio model to the vA3C JSON format and then renders it</description>
   <modeler_description>Exports the OpenStudio model to the vA3C JSON format and then renders it</modeler_description>
+  <arguments/>
   <provenances/>
   <tags>
     <tag>Reporting.QAQC</tag>
@@ -22,38 +27,51 @@
   </attributes>
   <files>
     <file>
-      <version>
-        <software_program>OpenStudio</software_program>
-        <identifier>1.4.0</identifier>
-      </version>
-      <filename>measure.rb</filename>
-      <filetype>rb</filetype>
-      <usage_type>script</usage_type>
-      <checksum>B291FD36</checksum>
-    </file>
-    <file>
-      <filename>ViewModel_Test.rb</filename>
-      <filetype>rb</filetype>
-      <usage_type>test</usage_type>
-      <checksum>8115B3BE</checksum>
-    </file>
-    <file>
       <filename>ExampleModel.osm</filename>
       <filetype>osm</filetype>
       <usage_type>test</usage_type>
       <checksum>4D4C61B5</checksum>
     </file>
     <file>
-      <filename>USA_CO_Golden-NREL.724666_TMY3.epw</filename>
-      <filetype>epw</filetype>
-      <usage_type>test</usage_type>
-      <checksum>BDF687C1</checksum>
-    </file>
-    <file>
       <filename>report.html.in</filename>
       <filetype>in</filetype>
       <usage_type>resource</usage_type>
       <checksum>3501204C</checksum>
+    </file>
+    <file>
+      <version>
+        <software_program>OpenStudio</software_program>
+        <identifier>1.6.3</identifier>
+        <min_compatible>1.6.3</min_compatible>
+      </version>
+      <filename>measure.rb</filename>
+      <filetype>rb</filetype>
+      <usage_type>script</usage_type>
+      <checksum>008BAC1E</checksum>
+    </file>
+    <file>
+      <filename>ViewModel_Test.rb</filename>
+      <filetype>rb</filetype>
+      <usage_type>test</usage_type>
+      <checksum>B0D220CE</checksum>
+    </file>
+    <file>
+      <filename>report.json</filename>
+      <filetype>json</filetype>
+      <usage_type>test</usage_type>
+      <checksum>0B9158ED</checksum>
+    </file>
+    <file>
+      <filename>SimpleModel.osm</filename>
+      <filetype>osm</filetype>
+      <usage_type>test</usage_type>
+      <checksum>AC094EF8</checksum>
+    </file>
+    <file>
+      <filename>va3c.rb</filename>
+      <filetype>rb</filetype>
+      <usage_type>resource</usage_type>
+      <checksum>6EF99A2F</checksum>
     </file>
   </files>
 </measure>
