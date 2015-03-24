@@ -75,7 +75,7 @@ class Va3c
     materials << make_material("0xccb266", 1) # wall
     materials << make_material("0x994c4c", 1) # roof
     materials << make_material("0x66b2cc", 0.6) # window
-    materials << make_material("0x954b01", 1) # all else
+    materials << make_material("0x551A8B", 1) # all else
     
     return materials
   end
@@ -282,6 +282,102 @@ class Va3c
 
     return [geometries, user_datas]
   end
+  
+  # turn a shading surface into geometries
+  def self.make_shade_geometries(surface)
+    geometries = []
+    user_datas = []
+
+    # get the transformation to site coordinates
+    site_transformation = OpenStudio::Transformation.new
+    planar_surface_group = surface.planarSurfaceGroup
+    if not planar_surface_group.empty?
+      site_transformation = planar_surface_group.get.siteTransformation
+    end
+
+    # get the vertices
+    surface_vertices = surface.vertices
+    t = OpenStudio::Transformation::alignFace(surface_vertices)
+    r = t.rotationMatrix
+    tInv = t.inverse
+    surface_vertices = OpenStudio::reverse(tInv*surface_vertices)
+
+    # triangulate surface
+    triangles = OpenStudio::computeTriangulation(surface_vertices, OpenStudio::Point3dVectorVector.new)
+    if triangles.empty?
+      puts "Failed to triangulate shading surface #{surface.name}"
+      return geometries
+    end
+
+    all_vertices = []
+    face_indices = []
+    triangles.each do |vertices|
+      vertices = site_transformation*t*vertices
+      #normal = site_transformation.rotationMatrix*r*z
+
+      # https://github.com/mrdoob/three.js/wiki/JSON-Model-format-3
+      # 0 indicates triangle
+      # 16 indicates triangle with normals
+      face_indices << 0
+      vertices.each do |vertex|
+        face_indices << get_vertex_index(vertex, all_vertices)  
+      end
+
+      # convert to 1 based indices
+      #face_indices.each_index {|i| face_indices[i] = face_indices[i] + 1}
+    end
+
+    data = GeometryData.new
+    data.vertices = flatten_vertices(all_vertices)
+    data.normals = [] 
+    data.uvs = []
+    data.faces = face_indices
+    data.scale = 1
+    data.visible = true
+    data.castShadow = true
+    data.receiveShadow = false
+    data.doubleSided = true
+    
+    geometry = Geometry.new
+    geometry.uuid = format_uuid(surface.handle)
+    geometry.type = "Geometry"
+    geometry.data = data.to_h
+    geometries << geometry.to_h
+    
+    surface_user_data = UserData.new
+    surface_user_data.handle = format_uuid(surface.handle)
+    surface_user_data.name = surface.name.to_s
+    surface_user_data.surfaceType = "Shade"
+    surface_user_data.constructionName = nil
+    if surface.construction.is_initialized
+      surface_user_data.constructionName = surface.construction.get.name.to_s
+    end
+    surface_user_data.spaceName = nil
+    surface_user_data.thermalZoneName = nil
+    if surface.space.is_initialized
+      space = surface.space.get
+      surface_user_data.spaceName = space.name.to_s
+      if space.thermalZone.is_initialized
+        surface_user_data.thermalZoneName = space.thermalZone.get.name.to_s
+      end
+    end
+    surface_user_data.outsideBoundaryCondition = nil
+    surface_user_data.outsideBoundaryConditionObjectName = nil
+    surface_user_data.sunExposure = "SunExposed"
+    surface_user_data.windExposure = "WindExposed"
+    vertices = []
+    surface.vertices.each do |v| 
+      vertex = Vertex.new
+      vertex.x = v.x
+      vertex.y = v.y
+      vertex.z = v.z
+      vertices << vertex.to_h
+    end
+    surface_user_data.vertices = vertices
+    user_datas << surface_user_data.to_h
+
+    return [geometries, user_datas]
+  end  
 
   def self.identity_matrix
     return [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]
@@ -337,6 +433,31 @@ class Va3c
       end
       
     end
+    
+    # loop over all shading surfaces
+    model.getShadingSurfaces.each do |surface|
+
+      material = materials[4]    
+  
+      geometries, user_datas = make_shade_geometries(surface)
+      geometries.each_index do |i| 
+        geometry = geometries[i]
+        user_data = user_datas[i]
+        
+        all_geometries << geometry
+
+        scene_child = SceneChild.new
+        scene_child.uuid = format_uuid(OpenStudio::createUUID) 
+        scene_child.name = "#{surface.name.to_s} #{i}"
+        scene_child.type = "Mesh"
+        scene_child.geometry = geometry[:uuid]
+        scene_child.material = material[:uuid]
+        scene_child.matrix = identity_matrix
+        scene_child.userData = user_data
+        object[:children] << scene_child.to_h
+      end
+      
+    end    
     
     light = AmbientLight.new
     light.uuid = "#{format_uuid(OpenStudio::createUUID)}"

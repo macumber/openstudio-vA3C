@@ -111,6 +111,8 @@ class ViewModel_Test < MiniTest::Test
     
     assert(File.exist?(reportPath()))
     
+    # load the output in http://threejs.org/editor/ to test
+    
   end  
 
 end
