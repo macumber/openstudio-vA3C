@@ -36,13 +36,13 @@ class ViewModel < OpenStudio::Ruleset::ReportingUserScript
     end
     model = model.get
     
-    sqlFile = runner.lastEnergyPlusSqlFile
-    if sqlFile.empty?
-      runner.registerError("Cannot find last sql file.")
-      return false
-    end
-    sqlFile = sqlFile.get
-    model.setSqlFile(sqlFile)
+    #sqlFile = runner.lastEnergyPlusSqlFile
+    #if sqlFile.empty?
+    #  runner.registerError("Cannot find last sql file.")
+    #  return false
+    #end
+    #sqlFile = sqlFile.get
+    #model.setSqlFile(sqlFile)
     
     # convert the model to va3c JSON format
     json = Va3c.convert_model(model)
@@ -60,7 +60,7 @@ class ViewModel < OpenStudio::Ruleset::ReportingUserScript
     end
 
     #closing the sql file
-    sqlFile.close()
+    #sqlFile.close()
 
     #reporting final condition
     runner.registerFinalCondition("Goodbye.")

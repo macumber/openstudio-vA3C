@@ -10,16 +10,23 @@ if /^1\.8/.match(RUBY_VERSION)
   end
 end
 
+# using export at http://va3c.github.io/projects/#./osm-data-viewer/latest/index.html# as a guide
 class Va3c
 
-  Material = Struct.new(:uuid, :type, :color, :ambient, :emissive, :specular, :shininess, :opacity, :transparent, :wireframe, :side)
-  GeometryData = Struct.new(:vertices, :normals, :uvs, :faces, :scale, :visible, :castShadow, :receiveShadow, :doubleSided)
-  Geometry = Struct.new(:uuid, :type, :data)
-  AmbientLight = Struct.new(:uuid, :type, :color, :matrix)
-  SceneChild = Struct.new(:uuid, :name, :type, :geometry, :material, :matrix, :userData)
-  SceneObject = Struct.new(:uuid, :type, :matrix, :children)
   Scene = Struct.new(:geometries, :materials, :object)
   
+  Geometry = Struct.new(:uuid, :type, :data)
+  GeometryData = Struct.new(:vertices, :normals, :uvs, :faces, :scale, :visible, :castShadow, :receiveShadow, :doubleSided)
+
+  Material = Struct.new(:uuid, :type, :color, :ambient, :emissive, :specular, :shininess, :side, :opacity, :transparent, :wireframe)
+  
+  SceneObject = Struct.new(:uuid, :type, :matrix, :children)
+  SceneChild = Struct.new(:uuid, :name, :type, :geometry, :material, :matrix, :userData)
+  UserData = Struct.new(:handle, :name, :surfaceType, :constructionName, :spaceName, :thermalZoneName, :outsideBoundaryCondition, :outsideBoundaryConditionObjectName, :sunExposure, :windExposure, :vertices)
+  Vertex = Struct.new(:x, :y, :z)
+ 
+  AmbientLight = Struct.new(:uuid, :type, :color, :matrix)
+   
   def self.convert_model(model)
     scene = build_scene(model)
 
@@ -102,6 +109,7 @@ class Va3c
   # turn a surface into geometries, the first one is the surface, remaining are sub surfaces
   def self.make_geometries(surface)
     geometries = []
+    user_datas = []
 
     # get the transformation to site coordinates
     site_transformation = OpenStudio::Transformation.new
@@ -166,6 +174,41 @@ class Va3c
     geometry.data = data.to_h
     geometries << geometry.to_h
     
+    surface_user_data = UserData.new
+    surface_user_data.handle = format_uuid(surface.handle)
+    surface_user_data.name = surface.name.to_s
+    surface_user_data.surfaceType = surface.surfaceType
+    surface_user_data.constructionName = nil
+    if surface.construction.is_initialized
+      surface_user_data.constructionName = surface.construction.get.name.to_s
+    end
+    surface_user_data.spaceName = nil
+    surface_user_data.thermalZoneName = nil
+    if surface.space.is_initialized
+      space = surface.space.get
+      surface_user_data.spaceName = space.name.to_s
+      if space.thermalZone.is_initialized
+        surface_user_data.thermalZoneName = space.thermalZone.get.name.to_s
+      end
+    end
+    surface_user_data.outsideBoundaryCondition = surface.outsideBoundaryCondition
+    surface_user_data.outsideBoundaryConditionObjectName = nil
+    if surface.adjacentSurface.is_initialized
+      surface_user_data.outsideBoundaryConditionObjectName = surface.adjacentSurface.get.name.to_s
+    end
+    surface_user_data.sunExposure = surface.sunExposure
+    surface_user_data.windExposure = surface.windExposure
+    vertices = []
+    surface.vertices.each do |v| 
+      vertex = Vertex.new
+      vertex.x = v.x
+      vertex.y = v.y
+      vertex.z = v.z
+      vertices << vertex.to_h
+    end
+    surface_user_data.vertices = vertices
+    user_datas << surface_user_data.to_h
+    
     # now add geometry for each sub surface
     sub_surfaces.each do |sub_surface|
    
@@ -207,9 +250,37 @@ class Va3c
       geometry.type = "Geometry"
       geometry.data = data.to_h
       geometries << geometry.to_h
+      
+      sub_surface_user_data = UserData.new
+      sub_surface_user_data.handle = format_uuid(sub_surface.handle)
+      sub_surface_user_data.name = sub_surface.name.to_s
+      sub_surface_user_data.surfaceType = sub_surface.subSurfaceType
+      sub_surface_user_data.constructionName = nil
+      if sub_surface.construction.is_initialized
+        sub_surface_user_data.constructionName = sub_surface.construction.get.name.to_s
+      end     
+      sub_surface_user_data.spaceName = surface_user_data.spaceName
+      sub_surface_user_data.thermalZoneName = surface_user_data.thermalZoneName
+      sub_surface_user_data.outsideBoundaryCondition = surface_user_data.outsideBoundaryCondition
+      sub_surface_user_data.outsideBoundaryConditionObjectName = nil
+      if sub_surface.adjacentSubSurface.is_initialized
+        sub_surface_user_data.outsideBoundaryConditionObjectName = sub_surface.adjacentSubSurface.get.name.to_s
+      end
+      sub_surface_user_data.sunExposure = surface_user_data.sunExposure
+      sub_surface_user_data.windExposure = surface_user_data.windExposure
+      vertices = []
+      surface.vertices.each do |v| 
+        vertex = Vertex.new
+        vertex.x = v.x
+        vertex.y = v.y
+        vertex.z = v.z
+        vertices << vertex.to_h
+      end
+      sub_surface_user_data.vertices = vertices
+      user_datas << sub_surface_user_data.to_h     
     end
 
-    return geometries
+    return [geometries, user_datas]
   end
 
   def self.identity_matrix
@@ -239,26 +310,29 @@ class Va3c
       elsif surfaceType == "ROOFCEILING"
         material = materials[2]    
       end
-
-      geometries = make_geometries(surface)
+  
+      geometries, user_datas = make_geometries(surface)
       geometries.each_index do |i| 
-        all_geometries << geometries[i]
+        geometry = geometries[i]
+        user_data = user_datas[i]
         
+        all_geometries << geometry
+
         scene_child = SceneChild.new
-        scene_child.uuid = format_uuid(OpenStudio::createUUID) # is this right?
-        scene_child.name = format_uuid(OpenStudio::createUUID) # is this right?
+        scene_child.uuid = format_uuid(OpenStudio::createUUID) 
+        scene_child.name = "#{surface.name.to_s} #{i}"
         scene_child.type = "Mesh"
-        scene_child.geometry = geometries[i][:uuid]
+        scene_child.geometry = geometry[:uuid]
         
         if i == 0
-          scene_child.material =  material[:uuid]
+          scene_child.material = material[:uuid]
         else
           # sub surface, assign window 
           scene_child.material =  materials[3][:uuid]
         end
         
         scene_child.matrix = identity_matrix
-        scene_child.userData = {}
+        scene_child.userData = user_data
         object[:children] << scene_child.to_h
       end
       

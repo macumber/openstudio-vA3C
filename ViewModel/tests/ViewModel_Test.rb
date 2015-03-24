@@ -27,7 +27,7 @@ class ViewModel_Test < MiniTest::Test
   end
   
   def reportPath
-    return "./report.json"
+    return "./output/report.json"
   end
   
   # create test files if they do not exist
@@ -39,22 +39,23 @@ class ViewModel_Test < MiniTest::Test
     
     assert(File.exist?(modelPath()))
     
-    assert(File.exist?(runDir()))
+    #assert(File.exist?(runDir()))
     
-    if not File.exist?(sqlPath())
-      puts "Running EnergyPlus"
-      
-      co = OpenStudio::Runmanager::ConfigOptions.new(true)
-      co.findTools(false, true, false, true)
-      
-      wf = OpenStudio::Runmanager::Workflow.new("modeltoidf->energypluspreprocess->energyplus")
-      wf.add(co.getTools())
-      job = wf.create(OpenStudio::Path.new(runDir()), OpenStudio::Path.new(modelPath()))
-
-      rm = OpenStudio::Runmanager::RunManager.new
-      rm.enqueue(job, true)
-      rm.waitForFinished
-    end
+    # DLM: we do not need sql data 
+    #if not File.exist?(sqlPath())
+    #  puts "Running EnergyPlus"
+    #  
+    #  co = OpenStudio::Runmanager::ConfigOptions.new(true)
+    #  co.findTools(false, true, false, true)
+    #  
+    #  wf = OpenStudio::Runmanager::Workflow.new("modeltoidf->energypluspreprocess->energyplus")
+    #  wf.add(co.getTools())
+    #  job = wf.create(OpenStudio::Path.new(runDir()), OpenStudio::Path.new(modelPath()))
+    #
+    #  rm = OpenStudio::Runmanager::RunManager.new
+    #  rm.enqueue(job, true)
+    #  rm.waitForFinished
+    #end
   end
 
   # delete output files
@@ -75,7 +76,7 @@ class ViewModel_Test < MiniTest::Test
   def test_ViewModel
      
     assert(File.exist?(modelPath()))
-    assert(File.exist?(sqlPath()))
+    #assert(File.exist?(sqlPath()))
      
     # create an instance of the measure
     measure = ViewModel.new
@@ -88,9 +89,15 @@ class ViewModel_Test < MiniTest::Test
     assert_equal(0, arguments.size)
     
     # set up runner, this will happen automatically when measure is run in PAT
-    runner.setLastOpenStudioModelPath(OpenStudio::Path.new(modelPath))    
-    runner.setLastEnergyPlusSqlFilePath(OpenStudio::Path.new(sqlPath))    
-       
+    runner.setLastOpenStudioModelPath(OpenStudio::Path.new(modelPath()))    
+    runner.setLastEnergyPlusSqlFilePath(OpenStudio::Path.new(sqlPath()))    
+    
+    current_dir = Dir.pwd
+    run_dir = File.dirname(__FILE__) + "/output"
+    FileUtils.rm_rf(run_dir) if File.exists?(run_dir)
+    FileUtils.mkdir_p(run_dir)
+    Dir.chdir(run_dir)
+    
     # set argument values to good values and run the measure
     argument_map = OpenStudio::Ruleset::OSArgumentMap.new
     measure.run(runner, argument_map)
@@ -99,6 +106,8 @@ class ViewModel_Test < MiniTest::Test
     assert(result.value.valueName == "Success")
     assert(result.warnings.size == 0)
     #assert(result.info.size == 1)
+    
+    Dir.chdir(current_dir)
     
     assert(File.exist?(reportPath()))
     
