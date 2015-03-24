@@ -459,12 +459,12 @@ class Va3c
       
     end    
     
-    light = AmbientLight.new
-    light.uuid = "#{format_uuid(OpenStudio::createUUID)}"
-    light.type = "AmbientLight"
-    light.color = "0xFFFFFF".hex
-    light.matrix = identity_matrix
-    object[:children] << light.to_h
+    #light = AmbientLight.new
+    #light.uuid = "#{format_uuid(OpenStudio::createUUID)}"
+    #light.type = "AmbientLight"
+    #light.color = "0xFFFFFF".hex
+    #light.matrix = identity_matrix
+    #object[:children] << light.to_h
       
     scene = Scene.new
     scene.geometries = all_geometries
