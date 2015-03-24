@@ -2,12 +2,12 @@
   <schema_version>3.0</schema_version>
   <name>view_model</name>
   <uid>f4669f10-fda5-489d-8e1c-7ca3c2d40378</uid>
-  <version_id>dca5db00-1133-4ce2-ac86-69d9ceb5ca57</version_id>
+  <version_id>725ee7d7-9f33-4123-af06-a9a7c2b2c56c</version_id>
   <xml_checksum>2C8A3EEF</xml_checksum>
   <class_name>ViewModel</class_name>
   <display_name>ViewModel</display_name>
-  <description>Exports the OpenStudio model to the vA3C JSON format and then renders it</description>
-  <modeler_description>Exports the OpenStudio model to the vA3C JSON format and then renders it</modeler_description>
+  <description>Visualize an OpenStudio model in a web based viewer</description>
+  <modeler_description>Converts the OpenStudio model to vA3C JSON format and renders using Three.js</modeler_description>
   <arguments/>
   <provenances/>
   <tags>
@@ -33,10 +33,16 @@
       <checksum>4D4C61B5</checksum>
     </file>
     <file>
+      <filename>SimpleModel.osm</filename>
+      <filetype>osm</filetype>
+      <usage_type>test</usage_type>
+      <checksum>AC094EF8</checksum>
+    </file>
+    <file>
       <filename>report.html.in</filename>
       <filetype>in</filetype>
       <usage_type>resource</usage_type>
-      <checksum>3501204C</checksum>
+      <checksum>39C79A69</checksum>
     </file>
     <file>
       <version>
@@ -47,31 +53,19 @@
       <filename>measure.rb</filename>
       <filetype>rb</filetype>
       <usage_type>script</usage_type>
-      <checksum>008BAC1E</checksum>
+      <checksum>13AD435B</checksum>
     </file>
     <file>
       <filename>ViewModel_Test.rb</filename>
       <filetype>rb</filetype>
       <usage_type>test</usage_type>
-      <checksum>B0D220CE</checksum>
-    </file>
-    <file>
-      <filename>report.json</filename>
-      <filetype>json</filetype>
-      <usage_type>test</usage_type>
-      <checksum>0B9158ED</checksum>
-    </file>
-    <file>
-      <filename>SimpleModel.osm</filename>
-      <filetype>osm</filetype>
-      <usage_type>test</usage_type>
-      <checksum>AC094EF8</checksum>
+      <checksum>96E163D6</checksum>
     </file>
     <file>
       <filename>va3c.rb</filename>
       <filetype>rb</filetype>
       <usage_type>resource</usage_type>
-      <checksum>6EF99A2F</checksum>
+      <checksum>CE33663A</checksum>
     </file>
   </files>
 </measure>

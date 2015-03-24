@@ -10,8 +10,10 @@ if /^1\.8/.match(RUBY_VERSION)
   end
 end
 
+# Va3c class converts an OpenStudio model to vA3C JSON format for rendering in Three.js
 # using export at http://va3c.github.io/projects/#./osm-data-viewer/latest/index.html# as a guide
-class Va3c
+# many thanks to Theo Armour and the vA3C team for figuring out many of the details here
+class VA3C
 
   Scene = Struct.new(:geometries, :materials, :object)
   
