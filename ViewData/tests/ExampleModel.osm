@@ -3139,6 +3139,12 @@ OS:Output:Variable,
   *,                                      !- Key Value
   Surface Outside Face Temperature;       !- Variable Name
 
+OS:Output:Variable,
+  {7e45beb2-02cc-4bb0-85a6-70159310216b}, !- Handle
+  Output Variable 5,                      !- Name
+  *,                                      !- Key Value
+  Zone Mean Air Temperature;       !- Variable Name
+
 OS:Meter,
   {a60ebd85-57b3-471b-a95f-21bda9b0dc8a}, !- Handle
   Electricity:Facility,                   !- Name

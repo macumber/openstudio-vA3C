@@ -60,6 +60,12 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
     return args
   end 
   
+  def vector_to_array(vector)
+    result = []
+    (0...vector.size).each {|i| result << vector[i]}
+    return result
+  end
+  
   #define what happens when the measure is run
   def run(runner, user_arguments)
     super(runner, user_arguments)
@@ -68,6 +74,9 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
     if not runner.validateUserArguments(arguments(), user_arguments)
       return false
     end
+    
+    variable_name = runner.getStringArgumentValue('variable_name',user_arguments)
+    reporting_frequency = runner.getStringArgumentValue('reporting_frequency',user_arguments)
 
     # get the last model and sql file
     model = runner.lastOpenStudioModel
@@ -85,8 +94,63 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
     sqlFile = sqlFile.get
     model.setSqlFile(sqlFile)
     
+    env_period = nil
+    sqlFile.availableEnvPeriods.each do |p|
+      if 'WeatherRunPeriod'.to_EnvironmentType == sqlFile.environmentType(p).get
+        env_period = p
+        break
+      end
+    end
+    
+    if !env_period
+      runner.registerError("No WeatherRunPeriods found in results")
+      return false
+    end
+    runner.registerInfo("Gathering results for run period '#{env_period}'")
+    
+    sqlFile.availableVariableNames(env_period, reporting_frequency).each do |variable|
+      runner.registerInfo("Available variable name '#{variable}'")
+    end
+    
+    surface_data = []
+    model.getPlanarSurfaces.each do |surface|
+      surface_name = surface.name.to_s.upcase
+      thermal_zone_name = nil
+      if (space = surface.space) && !space.empty?
+        if (thermal_zone = space.get.thermalZone) && !thermal_zone.empty?
+          thermal_zone_name = thermal_zone.get.name.to_s.upcase
+        end
+      end
+      surface_data << {'surface_name'=>surface_name, 'thermal_zone_name'=>thermal_zone_name, 'values'=>nil}
+    end
+   
+    times = nil
+    sqlFile.availableKeyValues(env_period, reporting_frequency, variable_name).each do |key|
+      runner.registerInfo("Available key '#{key}' for variable name '#{variable_name}'")
+      
+      ts = sqlFile.timeSeries(env_period, reporting_frequency, variable_name, key).get
+      
+      if times.nil?
+        times = vector_to_array(ts.daysFromFirstReport)
+      end
+      
+      values = vector_to_array(ts.values)
+      
+      if i = surface_data.index{|s| s['surface_name'] == key}
+        surface_data[i]['values'] = values
+      else  
+        surface_data.each do |s|
+          if s['thermal_zone_name'] == key
+            s['values'] = values
+          end
+        end
+      end
+    end
+    
     # convert the model to vA3C JSON format
     json = VA3C.convert_model(model)
+    json['times'] = times
+    json['surface_data'] = surface_data
 
     # write json file
     json_out_path = "./report.json"

@@ -89,7 +89,7 @@ class ViewData_Test < MiniTest::Test
   
     # create hash of argument values
     args_hash = {}
-    args_hash["variable_name"] = "Surface Outside Face Temperature"
+    args_hash["variable_name"] = 'Surface Outside Face Temperature'
     args_hash["reporting_frequency"] = 'Hourly'
 
     # populate argument with specified hash value if specified
