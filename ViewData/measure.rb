@@ -60,6 +60,12 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
     return args
   end 
   
+  def datetimes_to_array(dateTimes)
+    result = []
+    dateTimes.each {|d| result << d.to_s}
+    return result
+  end
+  
   def vector_to_array(vector)
     result = []
     (0...vector.size).each {|i| result << vector[i]}
@@ -125,17 +131,26 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
     end
    
     times = nil
+    data_range = [Float::MAX, Float::MIN] # data max, data min
     sqlFile.availableKeyValues(env_period, reporting_frequency, variable_name).each do |key|
       runner.registerInfo("Available key '#{key}' for variable name '#{variable_name}'")
       
       ts = sqlFile.timeSeries(env_period, reporting_frequency, variable_name, key).get
       
       if times.nil?
-        times = vector_to_array(ts.daysFromFirstReport)
+        times = datetimes_to_array(ts.dateTimes)
       end
       
       values = vector_to_array(ts.values)
-      
+      min = values.min
+      max = values.max
+      if (min < data_range[0])
+        data_range[0] = min
+      end
+      if (max > data_range[1])
+        data_range[1] = max
+      end
+
       if i = surface_data.index{|s| s['surface_name'] == key}
         surface_data[i]['values'] = values
       else  
@@ -150,7 +165,20 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
     # convert the model to vA3C JSON format
     json = VA3C.convert_model(model)
     json['times'] = times
-    json['surface_data'] = surface_data
+    json['data_range'] = data_range
+    
+    json['object'][:children].each do |child|
+      name = child[:userData][:name].upcase
+      
+      surface = surface_data.find{|x| x['surface_name'] == name}
+      
+      values = nil
+      if surface
+        values = surface['values']
+      end
+      child[:userData][:values] = values
+      
+    end
 
     # write json file
     json_out_path = "./report.json"

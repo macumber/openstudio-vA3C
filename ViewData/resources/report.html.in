@@ -13,6 +13,8 @@
   
 	var info, renderer, scene, camera, controls, light;
 	var geometry, material, mesh, helper;
+  var data_range, times, time_index;
+  var playing = false;
 
 	var project;
 
@@ -22,16 +24,37 @@
 
 	init();
 	animate();
+  
+  function surface_name_eq(element, index, array, name) {
+    if (element['surface_name'] == name){
+      return true;
+    }
+    return false;
+  }
 
 	function init() {
-
+  
+    data_range = os_data['data_range'];
+    times = os_data['times'];
+    time_index = 0;
+    
 		var css = document.head.appendChild( document.createElement('style') );
 		css.innerHTML ='body { font: 600 12pt monospace; margin: 0; overflow: hidden; }' + '';
 
 		info = document.body.appendChild( document.createElement( 'div' ) );
 		info.style.cssText = 'left: 20px; position: absolute; top: 0px; width: 100% ';
-		info.innerHTML = '<div id=msg></div>';
-
+		info.innerHTML = '<a href="" ><h1>' + document.title + '</h1></a>' +
+    '<div>' +
+    '<button onclick=replay(); >Replay</button> or select time period:<br>' +
+    '<input type=range id=time_slider onchange=updateDisplay min=0 max=' + (times.length-1) + ' step=1 value=' + time_index + ' style=width:500px; /> ' +
+    '<button onclick=time_slider.value--; updateDisplay(); >&lt;</button> ' +
+    '<button onclick=time_slider.value++; updateDisplay(); >&gt;</button> ' +
+    '<input type=number id=num onchange=time_slider.value=num.value; updateDisplay(); style=width:70px;z-index:10; /> ' +
+    '<span id=txt ></span>' +
+    '</div>' +
+    '<div id=output ></div>';
+    
+    
 // Heads Up
 		headsUp = document.body.appendChild( document.createElement( 'div' ) );
 		headsUp.style.cssText = 'background-color: #ddd; border-radius: 8px; padding: 0 5px 10px 5px; opacity: 0.85; ' +
@@ -178,17 +201,7 @@
 				headsUp.style.top = -10 + 0.5 * window.innerHeight - mouse.y * 0.5 * window.innerHeight + 'px';
 				headsUp.style.display = '';
 
-				var txt = '<h3 style="margin:0;" >OSM Data Viewer / Three.js id:' + intersected.id + '</h3>' +
-					'Handle: <small>' + intersected.userData.handle + '</small><br>' +
-					'Name: ' + intersected.userData.name + '<br>' +
-					'Surface Type: ' + intersected.userData.surfaceType+ '<br>' +
-					'Space Name: <small>' + intersected.userData.spaceName + '</small><br>' +
-          'Thermal Zone: <small>' + intersected.userData.thermalZoneName + '</small><br>' +
-					'Outside Boundary Condition: ' + intersected.userData.outsideBoundaryCondition + '<br>' +
-					'Sun Exposure: ' + intersected.userData.sunExposure + '<br>' +
-					'Wind Exposure: ' + intersected.userData.windExposure + '<br>' +
-				'';
-				headsUp.innerHTML = txt;
+				updateHeadsUpText();
 
 			}
 
@@ -208,13 +221,60 @@
 		}
 
 	}
+  
+  function updateHeadsUpText(  ) {
+
+    if ( intersected ){
+      var txt = '<h3 style="margin:0;" >OSM Data Viewer / Three.js id:' + intersected.id + '</h3>' +
+        'Handle: <small>' + intersected.userData.handle + '</small><br>' +
+        'Name: ' + intersected.userData.name + '<br>' +
+        'Value: ' + intersected.userData.current_value + '<br>' +
+        'Surface Type: ' + intersected.userData.surfaceType+ '<br>' +
+        'Space Name: <small>' + intersected.userData.spaceName + '</small><br>' +
+        'Thermal Zone: <small>' + intersected.userData.thermalZoneName + '</small><br>' +
+        'Outside Boundary Condition: ' + intersected.userData.outsideBoundaryCondition + '<br>' +
+        'Sun Exposure: ' + intersected.userData.sunExposure + '<br>' +
+        'Wind Exposure: ' + intersected.userData.windExposure + '<br>' +
+      '';
+      headsUp.innerHTML = txt;
+    }
+  }
+  
+  function updateDisplay(  ) {
+    time_index = time_slider.value;
+    txt.innerHTML = times[time_index];
+    output.innerHTML = 'Value: ';
+    
+    scene_objects = project.children[0].children;
+  	for ( object of scene_objects ) {
+      if (object['userData'] && object['userData']['values']) {
+        value = object['userData']['values'][time_index];
+        object['userData']['current_value'] = value;
+        hue = (value - data_range[0]) / (data_range[1] - data_range[0]);
+        object.material.color.setHSL(hue, 0.8, 0.5);
+        object.material.needsUpdate = true; 
+      }else{
+        object['userData']['current_value'] = '';
+        object.material.color.setHSL(0, 1.0, 1.0);
+        object.material.needsUpdate = true; 
+      }
+    }
+    
+    updateHeadsUpText();
+  }
+
+  function replay() {
+    playing = playing === true ? false : true;
+  }
 
 	function animate( timestamp ) {
 
 		requestAnimationFrame( animate );
 		controls.update();
+    updateDisplay();
 		renderer.render( scene, camera );
-
+    
+    if ( playing === true ) { time_slider.value++, updateDisplay(); }
 	}
 
 </script>
