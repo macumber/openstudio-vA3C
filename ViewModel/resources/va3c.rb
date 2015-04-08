@@ -34,7 +34,7 @@ class VA3C
 
     # build up the json hash
     result = Hash.new
-    result['metadata'] = { "version" => 4.3, "type" => "Object", "generator" => "OpenStudio" }
+    result['metadata'] = { 'version' => 4.3, 'type' => 'Object', 'generator' => 'OpenStudio' }
     result['geometries'] = scene.geometries
     result['materials'] = scene.materials
     result['object'] = scene.object
@@ -44,7 +44,7 @@ class VA3C
   
   # format a uuid
   def self.format_uuid(uuid)
-    return uuid.to_s.gsub("{","").gsub("}","")
+    return uuid.to_s.gsub('{','').gsub('}','')
   end
   
   # create a material
@@ -56,11 +56,11 @@ class VA3C
     end
 
     material = {:uuid => "#{format_uuid(OpenStudio::createUUID)}",
-                :type => "MeshPhongMaterial",
+                :type => 'MeshPhongMaterial',
                 :color => "#{color}".hex,
                 :ambient => "#{color}".hex,
-                :emissive => "0x000000".hex,
-                :specular => "0x808080".hex,
+                :emissive => '0x000000'.hex,
+                :specular => '0x808080'.hex,
                 :shininess => 50,
                 :opacity => opacity,
                 :transparent => transparent,
@@ -73,11 +73,11 @@ class VA3C
   def self.build_materials
     materials = []
     
-    materials << make_material("0x808080", 1) # floor
-    materials << make_material("0xccb266", 1) # wall
-    materials << make_material("0x994c4c", 1) # roof
-    materials << make_material("0x66b2cc", 0.6) # window
-    materials << make_material("0x551A8B", 1) # all else
+    materials << make_material('0x808080', 1) # floor
+    materials << make_material('0xccb266', 1) # wall
+    materials << make_material('0x994c4c', 1) # roof
+    materials << make_material('0x66b2cc', 0.6) # window
+    materials << make_material('0x551A8B', 1) # all else
     
     return materials
   end
@@ -172,7 +172,7 @@ class VA3C
     
     geometry = Geometry.new
     geometry.uuid = format_uuid(surface.handle)
-    geometry.type = "Geometry"
+    geometry.type = 'Geometry'
     geometry.data = data.to_h
     geometries << geometry.to_h
     
@@ -249,7 +249,7 @@ class VA3C
       
       geometry = Geometry.new
       geometry.uuid = format_uuid(sub_surface.handle)
-      geometry.type = "Geometry"
+      geometry.type = 'Geometry'
       geometry.data = data.to_h
       geometries << geometry.to_h
       
@@ -342,14 +342,14 @@ class VA3C
     
     geometry = Geometry.new
     geometry.uuid = format_uuid(surface.handle)
-    geometry.type = "Geometry"
+    geometry.type = 'Geometry'
     geometry.data = data.to_h
     geometries << geometry.to_h
     
     surface_user_data = UserData.new
     surface_user_data.handle = format_uuid(surface.handle)
     surface_user_data.name = surface.name.to_s
-    surface_user_data.surfaceType = "Shade"
+    surface_user_data.surfaceType = 'Shade'
     surface_user_data.constructionName = nil
     if surface.construction.is_initialized
       surface_user_data.constructionName = surface.construction.get.name.to_s
@@ -365,8 +365,8 @@ class VA3C
     end
     surface_user_data.outsideBoundaryCondition = nil
     surface_user_data.outsideBoundaryConditionObjectName = nil
-    surface_user_data.sunExposure = "SunExposed"
-    surface_user_data.windExposure = "WindExposed"
+    surface_user_data.sunExposure = 'SunExposed'
+    surface_user_data.windExposure = 'WindExposed'
     vertices = []
     surface.vertices.each do |v| 
       vertex = Vertex.new
@@ -391,7 +391,7 @@ class VA3C
     
     object = Hash.new
     object[:uuid] = format_uuid(OpenStudio::createUUID)
-    object[:type] = "Scene"
+    object[:type] = 'Scene'
     object[:matrix] = identity_matrix
     object[:children] = []
     
@@ -401,11 +401,11 @@ class VA3C
 
       material = nil
       surfaceType = surface.surfaceType.upcase
-      if surfaceType == "FLOOR"
+      if surfaceType == 'FLOOR'
         material = materials[0]
-      elsif surfaceType == "WALL"
+      elsif surfaceType == 'WALL'
         material = materials[1]
-      elsif surfaceType == "ROOFCEILING"
+      elsif surfaceType == 'ROOFCEILING'
         material = materials[2]    
       end
   
@@ -451,7 +451,7 @@ class VA3C
         scene_child = SceneChild.new
         scene_child.uuid = format_uuid(OpenStudio::createUUID) 
         scene_child.name = "#{surface.name.to_s} #{i}"
-        scene_child.type = "Mesh"
+        scene_child.type = 'Mesh'
         scene_child.geometry = geometry[:uuid]
         scene_child.material = material[:uuid]
         scene_child.matrix = identity_matrix

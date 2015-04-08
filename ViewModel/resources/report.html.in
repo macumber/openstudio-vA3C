@@ -1,222 +1,207 @@
-<!doctype html>
-<html lang=en >
+<!DOCTYPE html>
+<html>
 <head>
 <title>OpenStudio Model</title>
-<meta charset=utf-8 />
-<meta name=viewport content='width=device-width,user-scalable=no,minimum-scale=1.0,maximum-scale=1.0' />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<script src="http://mrdoob.github.io/three.js/build/three.min.js"></script>
+<script src="http://mrdoob.github.io/three.js/examples/js/controls/OrbitControls.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5/dat.gui.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/1.16.1/TweenLite.min.js"></script>
 </head>
 <body>
-<script src=http://mrdoob.github.io/three.js/build/three.min.js ></script>
-<script src=http://mrdoob.github.io/three.js/examples/js/controls/OrbitControls.js ></script>
 <script>
-  var os_data = <%= os_data %>;
-  
-	var info, renderer, scene, camera, controls, light;
-	var geometry, material, mesh, helper;
+var os_data = <%=os_data %>;
 
-	var project;
+var info, renderer, scene, camera, controls, light;
+var geometry, material, mesh, helper;
 
-	var raycaster;
-	var mouse;
-	var intersected, selected_material;
+var project;
 
-	init();
-	animate();
+var raycaster;
+var mouse;
+var intersected, selected_material;
 
-	function init() {
+init();
+animate();
 
-		var css = document.head.appendChild( document.createElement('style') );
-		css.innerHTML ='body { font: 600 12pt monospace; margin: 0; overflow: hidden; }' + '';
+function init() {
 
-		info = document.body.appendChild( document.createElement( 'div' ) );
-		info.style.cssText = 'left: 20px; position: absolute; top: 0px; width: 100% ';
-		info.innerHTML = '<div id=msg></div>';
+  var css = document.head.appendChild(document.createElement('style'));
+  css.innerHTML = 'body { font:600 12pt monospace; margin:0; overflow:hidden; }';
 
-// Heads Up
-		headsUp = document.body.appendChild( document.createElement( 'div' ) );
-		headsUp.style.cssText = 'background-color: #ddd; border-radius: 8px; padding: 0 5px 10px 5px; opacity: 0.85; ' +
-			'position: absolute; left: 50px; text-align: left; z-index: 10;';
+  info = document.body.appendChild(document.createElement('div'));
+  info.style.cssText = 'left:20px; position:absolute; top:0; width:100%;';
+  info.innerHTML = '<div id=msg></div>';
 
-		renderer = new THREE.WebGLRenderer( { alpha: 1, antialias: true, clearColor: 0xffffff }  );
-		renderer.setSize( window.innerWidth, window.innerHeight );
-		renderer.shadowMapEnabled = true;
-		renderer.shadowMapSoft = true;
-		document.body.appendChild( renderer.domElement );
+  // Heads Up
+  headsUp = document.body.appendChild(document.createElement('div'));
+  headsUp.style.cssText = 'background-color:#ddd; border-radius:8px; padding:0 5px 10px; opacity:0.85; position:absolute; left:50px; text-align:left; z-index:10;';
 
-		scene = new THREE.Scene();
+  renderer = new THREE.WebGLRenderer({
+    alpha: 1,
+    antialias: true,
+    clearColor: 0xffffff
+  });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMapEnabled = true;
+  renderer.shadowMapSoft = true;
+  document.body.appendChild(renderer.domElement);
 
-		camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 5000 );
-		camera.position.set( 100, 100, 100 );
-		scene.add( camera ); // for light to follow
+  scene = new THREE.Scene();
 
-// Controls
-		controls = new THREE.OrbitControls( camera, renderer.domElement );
-		controls.minDistance = 10;
-		controls.maxDistance = 1000;
+  camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 5000);
+  camera.position.set(100, 100, 100);
+  scene.add(camera); // for light to follow
 
-// Lights
-		light = new THREE.AmbientLight( 0xbbbbbb );
-		scene.add( light );
-/*
-		light = new THREE.DirectionalLight( 0xffffff, 0.5 );
-		light.position.set( -200, 200, 200 );
+  // Controls
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.minDistance = 10;
+  controls.maxDistance = 1000;
 
-		var d = 100;
-		light.shadowCameraLeft = -d;
-		light.shadowCameraRight = d;
-		light.shadowCameraTop = d;
-		light.shadowCameraBottom = -d;
+  // Lights
+  light = new THREE.AmbientLight(0xbbbbbb);
+  scene.add(light);
 
-		light.shadowCameraNear = 200;
-		light.shadowCameraFar = 500;
+  var axisHelper = new THREE.AxisHelper(50);
+  scene.add(axisHelper);
 
-    // can help stop appearance of gridlines in objects with opacity < 1
-		light.shadowBias = -0.0002; // default 0 ~ distance fron corners?
-		light.shadowDarkness = 0.3; // default 0.5
-		light.shadowMapWidth = 2048;  // default 512
-		light.shadowMapHeight = 2048;
+  project = new THREE.Object3D();
+  scene.add(project);
 
-		light.castShadow = true;
-		light.shadowCameraVisible = true;
-		scene.add( light );
+  var loader = new THREE.ObjectLoader();
+  data = loader.parse(os_data);
+  project.add(data);
 
-		light = new THREE.PointLight( 0xffffff, 0.5 );
-		light.position = camera.position;
-		camera.add( light );
-*/
-/*
-// Ground Plane
-		geometry = new THREE.BoxGeometry( 100, 5, 100 );
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
 
-//		var material.color = 0x202099; 
-//		var material = new THREE.MeshNormalMaterial();
-		var material = new THREE.MeshPhongMaterial( {
-			color: 0xffffff * Math.random(), 
-			ambient: 0xffffff * Math.random(),
-			specular: 0xffffff * Math.random(),
-			shininess: 50,
-			side: THREE.DoubleSide
-		} );
+  selected_material = new THREE.MeshPhongMaterial({
+    color: 0xffff00,
+    ambient: 0xffff00,
+    specular: 0xffff00,
+    emissive: 0xffff00,
+    shininess: 50,
+    side: THREE.DoubleSide
+  });
 
-		mesh = new THREE.Mesh( geometry, material );
-		mesh.position.set( 0, -10, 0 );
-		mesh.castShadow = true;
-		mesh.receiveShadow = true;
-		scene.add( mesh );
-
-		helper = new THREE.BoxHelper( mesh );
-		helper.material.color.setRGB( 1, 0, 1 );
-		scene.add( helper );
-
-		var helper = new THREE.GridHelper( 50, 10 );
-		helper.position.set( 0, -7.5, 0 );
-		scene.add( helper );
-*/
-
-		var axisHelper = new THREE.AxisHelper( 50 );
-		scene.add( axisHelper );
-
-		project = new THREE.Object3D();
-		scene.add( project );
-    
-    var loader = new THREE.ObjectLoader();
-    data = loader.parse( os_data );
-    project.add( data );
-
-		raycaster = new THREE.Raycaster();
-		mouse = new THREE.Vector2();
-    
-    selected_material = new THREE.MeshPhongMaterial( {
-			color: 0xffff00, 
-			ambient: 0xffff00,
-			specular: 0xffff00,
-      emissive: 0xffff00,
-			shininess: 50,
-			side: THREE.DoubleSide
-		} );
-    
-		document.addEventListener( 'click', onDocumentMouseClick, false );
-    
-    // DLM: how to resize the canvas? 
-    //window.onresize = function(event) {
-    //    ...
-    //};
-
-	}
+  document.addEventListener('click', onDocumentMouseClick, false);
+}
 
 
-	function onDocumentMouseClick( event ) {
+function onDocumentMouseClick(event) {
+  mouse.x = (event.clientX / renderer.domElement.width) * 2 - 1;
+  mouse.y = -(event.clientY / renderer.domElement.height) * 2 + 1;
 
-//		event.preventDefault();
+  raycaster.setFromCamera(mouse, camera);
+  intersects = raycaster.intersectObjects(project.children[0].children);
 
-		mouse.x = ( event.clientX / renderer.domElement.width ) * 2 - 1;
-		mouse.y = - ( event.clientY / renderer.domElement.height ) * 2 + 1;
-
-		raycaster.setFromCamera( mouse, camera );
-		intersects = raycaster.intersectObjects( project.children[0].children );
-    
-		if ( intersects.length > 0 ) {
-
-      // new intersected object
-			if ( intersected != intersects[ 0 ].object ) {
-
-        // restore material on deselected 
-				if ( intersected && intersected.lastMaterial ) {
-          intersected.material = intersected.lastMaterial;
-				}
-
-				intersected = intersects[ 0 ].object;
-
-        // save material
-				if ( intersected && intersected.material ) {
-					intersected.lastMaterial = intersected.material;
-				}
-        
-        intersected.material = selected_material;
-
-				headsUp.style.left = 10 + 0.5 * window.innerWidth + mouse.x * 0.5 * window.innerWidth + 'px';
-				headsUp.style.top = -10 + 0.5 * window.innerHeight - mouse.y * 0.5 * window.innerHeight + 'px';
-				headsUp.style.display = '';
-
-				var txt = '<h3 style="margin:0;" >OSM Data Viewer / Three.js id:' + intersected.id + '</h3>' +
-					'Handle: <small>' + intersected.userData.handle + '</small><br>' +
-					'Name: ' + intersected.userData.name + '<br>' +
-					'Surface Type: ' + intersected.userData.surfaceType+ '<br>' +
-					'Space Name: <small>' + intersected.userData.spaceName + '</small><br>' +
-          'Thermal Zone: <small>' + intersected.userData.thermalZoneName + '</small><br>' +
-					'Outside Boundary Condition: ' + intersected.userData.outsideBoundaryCondition + '<br>' +
-					'Sun Exposure: ' + intersected.userData.sunExposure + '<br>' +
-					'Wind Exposure: ' + intersected.userData.windExposure + '<br>' +
-				'';
-				headsUp.innerHTML = txt;
-
-			}
-
-			document.body.style.cursor = 'pointer';
-
-		} else {
-
-      // restore material on deselected 
-      if ( intersected && intersected.lastMaterial ) {
+  if (intersects.length) {
+    // new intersected object
+    if (intersected != intersects[0].object) {
+      // restore material on deselected
+      if (intersected && intersected.lastMaterial) {
         intersected.material = intersected.lastMaterial;
       }
 
-			intersected = null;
-			headsUp.style.display = 'none';
-			document.body.style.cursor = 'auto';
+      intersected = intersects[0].object;
 
-		}
+      // save material
+      if (intersected && intersected.material) {
+        intersected.lastMaterial = intersected.material;
+      }
 
-	}
+      intersected.material = selected_material;
 
-	function animate( timestamp ) {
+      headsUp.style.left = 10 + 0.5 * window.innerWidth + mouse.x * 0.5 * window.innerWidth + 'px';
+      headsUp.style.top = -10 + 0.5 * window.innerHeight - mouse.y * 0.5 * window.innerHeight + 'px';
+      headsUp.style.display = '';
 
-		requestAnimationFrame( animate );
-		controls.update();
-		renderer.render( scene, camera );
+      var txt = '<h3 style="margin:0;" >OSM Data Viewer / Three.js id:' + intersected.id + '</h3>' +
+        'Handle: <small>' + intersected.userData.handle + '</small><br>' +
+        'Name: ' + intersected.userData.name + '<br>' +
+        'Surface Type: ' + intersected.userData.surfaceType + '<br>' +
+        'Space Name: <small>' + intersected.userData.spaceName + '</small><br>' +
+        'Thermal Zone: <small>' + intersected.userData.thermalZoneName + '</small><br>' +
+        'Outside Boundary Condition: ' + intersected.userData.outsideBoundaryCondition + '<br>' +
+        'Sun Exposure: ' + intersected.userData.sunExposure + '<br>' +
+        'Wind Exposure: ' + intersected.userData.windExposure + '<br>' +
+        '';
+      headsUp.innerHTML = txt;
 
-	}
+    }
 
+    document.body.style.cursor = 'pointer';
+  } else {
+    // restore material on deselected
+    if (intersected && intersected.lastMaterial) {
+      intersected.material = intersected.lastMaterial;
+    }
+
+    intersected = null;
+    headsUp.style.display = 'none';
+    document.body.style.cursor = 'auto';
+  }
+
+}
+
+function animate(timestamp) {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+</script>
+<script>
+var settings = {
+  renderBy: 'Space Type',
+  show: 'All stories',
+  zoomExtents: function() {
+    console.log('View: extents');
+  },
+  xView: function() {
+    TweenLite.to(camera.position,1,{x:Math.sqrt(3*Math.pow(100, 2)),y:0,z:0});
+  },
+  yView: function() {
+    TweenLite.to(camera.position,1,{x:0,y:Math.sqrt(3*Math.pow(100, 2)),z:0});
+  },
+  zView: function() {
+    TweenLite.to(camera.position,1,{x:0,y:0,z:Math.sqrt(3*Math.pow(100, 2))});
+  },
+  reset: function() {
+    TweenLite.to(camera.position,1,{x:100,y:100,z:100});
+  },
+  xSection: 0,
+  ySection: 0,
+  zSection: 0
+};
+
+window.onload = function() {
+  var gui = new dat.GUI();
+    gui.add(settings, 'renderBy', ['Space Type', 'Boundary', 'Thermal Zone', 'Data']).name('Render By').onChange(function (value) {
+      console.log('New renderBy: ' + value);
+    });
+    gui.add(settings, 'show', ['All stories', 'Story 1', 'Story 2', 'Story 3']).name('Show').onChange(function (value) {
+      console.log('New show: ' + value);
+    });
+    var f1 = gui.addFolder('Camera');
+    f1.add(settings, 'zoomExtents').name('Zoom extents');
+    f1.add(settings, 'xView').name('X View');
+    f1.add(settings, 'yView').name('Y View');
+    f1.add(settings, 'zView').name('Z View');
+    f1.add(settings, 'reset').name('Reset');
+    f1.open();
+    var f2 = gui.addFolder('Section Cut');
+    f2.add(settings, 'xSection', 0, 360).name('X Section').onChange(function (value) {
+      console.log('X cut: ' + value);
+    });
+    f2.add(settings, 'ySection', 0, 360).name('Y Section').onChange(function (value) {
+      console.log('Y cut: ' + value);
+    });
+    f2.add(settings, 'zSection', 0, 360).name('Z Section').onChange(function (value) {
+      console.log('Z cut: ' + value);
+    });
+    f2.open();
+};
 </script>
 </body>
 </html>

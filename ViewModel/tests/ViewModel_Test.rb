@@ -27,7 +27,7 @@ class ViewModel_Test < MiniTest::Unit::TestCase
   end
   
   def reportPath
-    return "./output/report.json"
+    return 'output/report.json'
   end
   
   # create test files if they do not exist
@@ -93,7 +93,7 @@ class ViewModel_Test < MiniTest::Unit::TestCase
     runner.setLastEnergyPlusSqlFilePath(OpenStudio::Path.new(sqlPath()))    
     
     current_dir = Dir.pwd
-    run_dir = File.dirname(__FILE__) + "/output"
+    run_dir = File.dirname(__FILE__) + '/output'
     FileUtils.rm_rf(run_dir) if File.exists?(run_dir)
     FileUtils.mkdir_p(run_dir)
     Dir.chdir(run_dir)
@@ -103,7 +103,7 @@ class ViewModel_Test < MiniTest::Unit::TestCase
     measure.run(runner, argument_map)
     result = runner.result
     show_output(result)
-    assert(result.value.valueName == "Success")
+    assert(result.value.valueName == 'Success')
     assert(result.warnings.size == 0)
     #assert(result.info.size == 1)
     
