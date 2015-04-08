@@ -8,7 +8,7 @@ require 'fileutils'
 
 require 'minitest/autorun'
 
-class ViewData_Test < MiniTest::Test
+class ViewData_Test < MiniTest::Unit::TestCase
     
   # paths to expected test files, includes osm and eplusout.sql
   def modelPath
