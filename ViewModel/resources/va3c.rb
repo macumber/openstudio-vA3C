@@ -24,7 +24,7 @@ class VA3C
   
   SceneObject = Struct.new(:uuid, :type, :matrix, :children)
   SceneChild = Struct.new(:uuid, :name, :type, :geometry, :material, :matrix, :userData)
-  UserData = Struct.new(:handle, :name, :surfaceType, :constructionName, :spaceName, :thermalZoneName, :outsideBoundaryCondition, :outsideBoundaryConditionObjectName, :sunExposure, :windExposure, :vertices)
+  UserData = Struct.new(:handle, :name, :surfaceType, :constructionName, :spaceName, :thermalZoneName, :spaceTypeName, :buildingStoryName, :outsideBoundaryCondition, :outsideBoundaryConditionObjectName, :sunExposure, :windExposure, :vertices)
   Vertex = Struct.new(:x, :y, :z)
  
   AmbientLight = Struct.new(:uuid, :type, :color, :matrix)
@@ -46,9 +46,14 @@ class VA3C
   def self.format_uuid(uuid)
     return uuid.to_s.gsub('{','').gsub('}','')
   end
+    
+  # format color
+  def self.format_color(r, g, b)
+    return "0x#{r.to_s(16)}#{g.to_s(16)}#{b.to_s(16)}"
+  end
   
   # create a material
-  def self.make_material(color, opacity)
+  def self.make_material(name, color, opacity)
 
     transparent = false
     if opacity < 1
@@ -56,6 +61,7 @@ class VA3C
     end
 
     material = {:uuid => "#{format_uuid(OpenStudio::createUUID)}",
+                :name => name,
                 :type => 'MeshPhongMaterial',
                 :color => "#{color}".hex,
                 :ambient => "#{color}".hex,
@@ -70,14 +76,108 @@ class VA3C
   end
 
   # create the standard materials
-  def self.build_materials
+  def self.build_materials(model)
     materials = []
     
-    materials << make_material('0x808080', 1) # floor
-    materials << make_material('0xccb266', 1) # wall
-    materials << make_material('0x994c4c', 1) # roof
-    materials << make_material('0x66b2cc', 0.6) # window
-    materials << make_material('0x551A8B', 1) # all else
+    # materials from 'openstudio\openstudiocore\ruby\openstudio\sketchup_plugin\lib\interfaces\MaterialsInterface.rb'
+    materials << make_material('Floor', format_color(128, 128, 128), 1) 
+    materials << make_material('Floor_Int', format_color(191, 191, 191), 1) 
+    
+    materials << make_material('Wall', format_color(204, 178, 102), 1) 
+    materials << make_material('Wall_Int', format_color(235, 226, 197), 1) 
+    
+    materials << make_material('Roof', format_color(153, 76, 76), 1) 
+    materials << make_material('Roof_Int', format_color(202, 149, 149), 1) 
+
+    materials << make_material('Window', format_color(102, 178, 204), 0.6) 
+    materials << make_material('Window_Int', format_color(192, 226, 235), 0.6) 
+    
+    materials << make_material('Door', format_color(153, 133, 76), 1) 
+    materials << make_material('Door_Int', format_color(202, 188, 149), 1) 
+
+    materials << make_material('SiteShading', format_color(75, 124, 149), 1) 
+    materials << make_material('SiteShading_Int', format_color(187, 209, 220), 1) 
+
+    materials << make_material('BuildingShading', format_color(113, 76, 153), 1) 
+    materials << make_material('BuildingShading_Int', format_color(216, 203, 229), 1) 
+    
+    materials << make_material('SpaceShading', format_color(76, 110, 178), 1) 
+    materials << make_material('SpaceShading_Int', format_color(183, 197, 224), 1) 
+    
+    materials << make_material('InteriorPartitionSurface', format_color(158, 188, 143), 1) 
+    materials << make_material('InteriorPartitionSurface_Int', format_color(213, 226, 207), 1) 
+    
+    # start textures for boundary conditions
+    materials << make_material('Boundary_Surface', format_color(0, 153, 0), 1)
+    materials << make_material('Boundary_Adiabatic', format_color(255, 101, 178), 1)
+    materials << make_material('Boundary_Space', format_color(255, 0, 0), 1)
+    materials << make_material('Boundary_Outdoors', format_color(163, 204, 204), 1)
+    materials << make_material('Boundary_Outdoors_Sun', format_color(40, 204, 204), 1)
+    materials << make_material('Boundary_Outdoors_Wind', format_color(9, 159, 162), 1)
+    materials << make_material('Boundary_Outdoors_SunWind', format_color(68, 119, 161), 1)
+    materials << make_material('Boundary_Ground', format_color(204, 183, 122), 1)
+    materials << make_material('Boundary_Groundfcfactormethod', format_color(153, 122, 30), 1)
+    materials << make_material('Boundary_Groundslabpreprocessoraverage', format_color(255, 191, 0), 1)
+    materials << make_material('Boundary_Groundslabpreprocessorcore', format_color(255, 182, 50), 1)
+    materials << make_material('Boundary_Groundslabpreprocessorperimeter', format_color(255, 178, 101), 1)
+    materials << make_material('Boundary_Groundbasementpreprocessoraveragewall', format_color(204, 51, 0), 1)
+    materials << make_material('Boundary_Groundbasementpreprocessoraveragefloor', format_color(204, 81, 40), 1)
+    materials << make_material('Boundary_Groundbasementpreprocessorupperwall', format_color(204, 112, 81), 1)
+    materials << make_material('Boundary_Groundbasementpreprocessorlowerwall', format_color(204, 173, 163), 1)
+    materials << make_material('Boundary_Othersidecoefficients', format_color(63, 63, 63), 1)
+    materials << make_material('Boundary_Othersideconditionsmodel', format_color(153, 0, 76), 1) 
+    
+    # make construction materials
+    model.getConstructionBases.each do |construction|
+      color = construction.renderingColor
+      if color.empty?
+        color = OpenStudio::Model::RenderingColor.new(model)
+        construction.setRenderingColor(color)
+      else
+        color = color.get
+      end
+      name = "Construction_#{construction.name.to_s}"
+      make_material(name, format_color(color.renderingRedValue, color.renderingGreenValue, color.renderingBlueValue), color.renderingAlphaValue / 255.to_f)
+    end
+    
+    # make thermal zone materials
+    model.getThermalZones.each do |zone|
+      color = zone.renderingColor
+      if color.empty?
+        color = OpenStudio::Model::RenderingColor.new(model)
+        zone.setRenderingColor(color)
+      else
+        color = color.get        
+      end
+      name = "ThermalZone_#{zone.name.to_s}"
+      make_material(name, format_color(color.renderingRedValue, color.renderingGreenValue, color.renderingBlueValue), color.renderingAlphaValue / 255.to_f)
+    end
+    
+    # make space type materials
+    model.getSpaceTypes.each do |spaceType|
+      color = spaceType.renderingColor
+      if color.empty?
+        color = OpenStudio::Model::RenderingColor.new(model)
+        spaceType.setRenderingColor(color)
+      else
+        color = color.get        
+      end
+      name = "SpaceType_#{spaceType.name.to_s}"
+      make_material(name, format_color(color.renderingRedValue, color.renderingGreenValue, color.renderingBlueValue), color.renderingAlphaValue / 255.to_f)
+    end
+    
+    # make building story materials
+    model.getBuildingStorys.each do |buildingStory|
+      color = buildingStory.renderingColor
+      if color.empty?
+        color = OpenStudio::Model::RenderingColor.new(model)
+        buildingStory.setRenderingColor(color)
+      else
+        color = color.get        
+      end
+      name = "BuildingStory_#{buildingStory.name.to_s}"
+      make_material(name, format_color(color.renderingRedValue, color.renderingGreenValue, color.renderingBlueValue), color.renderingAlphaValue / 255.to_f)
+    end
     
     return materials
   end
@@ -180,26 +280,41 @@ class VA3C
     surface_user_data.handle = format_uuid(surface.handle)
     surface_user_data.name = surface.name.to_s
     surface_user_data.surfaceType = surface.surfaceType
-    surface_user_data.constructionName = nil
-    if surface.construction.is_initialized
-      surface_user_data.constructionName = surface.construction.get.name.to_s
-    end
-    surface_user_data.spaceName = nil
-    surface_user_data.thermalZoneName = nil
-    if surface.space.is_initialized
-      space = surface.space.get
-      surface_user_data.spaceName = space.name.to_s
-      if space.thermalZone.is_initialized
-        surface_user_data.thermalZoneName = space.thermalZone.get.name.to_s
-      end
-    end
+    
     surface_user_data.outsideBoundaryCondition = surface.outsideBoundaryCondition
-    surface_user_data.outsideBoundaryConditionObjectName = nil
-    if surface.adjacentSurface.is_initialized
-      surface_user_data.outsideBoundaryConditionObjectName = surface.adjacentSurface.get.name.to_s
+    adjacent_surface = surface.adjacentSurface
+    if adjacent_surface.is_initialized
+      surface_user_data.outsideBoundaryConditionObjectName = adjacent_surface.get.name.to_s
     end
     surface_user_data.sunExposure = surface.sunExposure
     surface_user_data.windExposure = surface.windExposure
+    
+    construction = surface.construction
+    if construction.is_initialized
+      surface_user_data.constructionName = construction.get.name.to_s
+    end
+    
+    space = surface.space
+    if space.is_initialized
+      space = space.get
+      surface_user_data.spaceName = space.name.to_s
+      
+      thermal_zone = space.thermalZone
+      if thermal_zone.is_initialized
+        surface_user_data.thermalZoneName = thermal_zone.get.name.to_s
+      end
+      
+      space_type = space.spaceType
+      if space_type.is_initialized
+        surface_user_data.spaceTypeName = space_type.get.name.to_s
+      end
+      
+      building_story = space.buildingStory
+      if building_story.is_initialized
+        surface_user_data.buildingStoryName = building_story.get.name.to_s
+      end
+    end
+    
     vertices = []
     surface.vertices.each do |v| 
       vertex = Vertex.new
@@ -257,19 +372,24 @@ class VA3C
       sub_surface_user_data.handle = format_uuid(sub_surface.handle)
       sub_surface_user_data.name = sub_surface.name.to_s
       sub_surface_user_data.surfaceType = sub_surface.subSurfaceType
-      sub_surface_user_data.constructionName = nil
-      if sub_surface.construction.is_initialized
-        sub_surface_user_data.constructionName = sub_surface.construction.get.name.to_s
-      end     
-      sub_surface_user_data.spaceName = surface_user_data.spaceName
-      sub_surface_user_data.thermalZoneName = surface_user_data.thermalZoneName
+      
       sub_surface_user_data.outsideBoundaryCondition = surface_user_data.outsideBoundaryCondition
-      sub_surface_user_data.outsideBoundaryConditionObjectName = nil
-      if sub_surface.adjacentSubSurface.is_initialized
-        sub_surface_user_data.outsideBoundaryConditionObjectName = sub_surface.adjacentSubSurface.get.name.to_s
+      adjacent_sub_surface = sub_surface.adjacentSubSurface
+      if adjacent_sub_surface.is_initialized
+        sub_surface_user_data.outsideBoundaryConditionObjectName = adjacent_sub_surface.get.name.to_s
       end
       sub_surface_user_data.sunExposure = surface_user_data.sunExposure
       sub_surface_user_data.windExposure = surface_user_data.windExposure
+      
+      construction = sub_surface.construction
+      if construction.is_initialized
+        sub_surface_user_data.constructionName = construction.get.name.to_s
+      end     
+      sub_surface_user_data.spaceName = surface_user_data.spaceName
+      sub_surface_user_data.thermalZoneName = surface_user_data.thermalZoneName
+      sub_surface_user_data.spaceTypeName = surface_user_data.spaceTypeName
+      sub_surface_user_data.buildingStoryName = surface_user_data.buildingStoryName
+
       vertices = []
       surface.vertices.each do |v| 
         vertex = Vertex.new
@@ -296,7 +416,37 @@ class VA3C
     if not planar_surface_group.empty?
       site_transformation = planar_surface_group.get.siteTransformation
     end
-
+    shading_surface_group = surface.shadingSurfaceGroup
+    shading_surface_type = 'Building'
+    space_name = nil
+    thermal_zone_name = nil
+    space_type_name = nil
+    building_story_name = nil
+    if not shading_surface_group.empty?
+      shading_surface_type = shading_surface_group.get.shadingSurfaceType
+      
+      space = shading_surface_group.get.space
+      if space.is_initialized
+        space = space.get
+        space_name = space.name.to_s
+        
+        thermal_zone = space.thermalZone
+        if thermal_zone.is_initialized
+          thermal_zone_name = thermal_zone.get.name.to_s
+        end
+        
+        space_type = space.spaceType
+        if space_type.is_initialized
+          space_type_name = space_type.get.name.to_s
+        end
+        
+        building_story = space.buildingStory
+        if building_story.is_initialized
+          building_story_name = building_story.get.name.to_s
+        end
+      end
+    end
+    
     # get the vertices
     surface_vertices = surface.vertices
     t = OpenStudio::Transformation::alignFace(surface_vertices)
@@ -349,24 +499,23 @@ class VA3C
     surface_user_data = UserData.new
     surface_user_data.handle = format_uuid(surface.handle)
     surface_user_data.name = surface.name.to_s
-    surface_user_data.surfaceType = 'Shade'
-    surface_user_data.constructionName = nil
-    if surface.construction.is_initialized
-      surface_user_data.constructionName = surface.construction.get.name.to_s
-    end
-    surface_user_data.spaceName = nil
-    surface_user_data.thermalZoneName = nil
-    if surface.space.is_initialized
-      space = surface.space.get
-      surface_user_data.spaceName = space.name.to_s
-      if space.thermalZone.is_initialized
-        surface_user_data.thermalZoneName = space.thermalZone.get.name.to_s
-      end
-    end
+    surface_user_data.surfaceType = shading_surface_type + 'Shading'
+  
     surface_user_data.outsideBoundaryCondition = nil
     surface_user_data.outsideBoundaryConditionObjectName = nil
     surface_user_data.sunExposure = 'SunExposed'
     surface_user_data.windExposure = 'WindExposed'
+    
+    construction = surface.construction
+    if construction.is_initialized
+      surface_user_data.constructionName = construction.get.name.to_s
+    end
+    
+    surface_user_data.spaceName = space_name
+    surface_user_data.thermalZoneName = thermal_zone_name
+    surface_user_data.spaceTypeName = space_type_name
+    surface_user_data.buildingStoryName = building_story_name
+
     vertices = []
     surface.vertices.each do |v| 
       vertex = Vertex.new
@@ -387,13 +536,23 @@ class VA3C
 
   def self.build_scene(model)
 
-    materials = build_materials
+    materials = build_materials(model)
     
     object = Hash.new
     object[:uuid] = format_uuid(OpenStudio::createUUID)
     object[:type] = 'Scene'
     object[:matrix] = identity_matrix
     object[:children] = []
+    
+    floor_material = materials.find {|m| m[:name] == 'Floor'}
+    wall_material = materials.find {|m| m[:name] == 'Wall'}
+    roof_material = materials.find {|m| m[:name] == 'Roof'}
+    window_material = materials.find {|m| m[:name] == 'Window'}
+    door_material = materials.find {|m| m[:name] == 'Door'}
+    site_shading_material = materials.find {|m| m[:name] == 'SiteShading'}
+    building_shading_material = materials.find {|m| m[:name] == 'BuildingShading'}
+    space_shading_material = materials.find {|m| m[:name] == 'SpaceShading'}
+    interior_partition_surface_material = materials.find {|m| m[:name] == 'InteriorPartitionSurface'}
     
     # loop over all surfaces
     all_geometries = []
@@ -402,11 +561,11 @@ class VA3C
       material = nil
       surfaceType = surface.surfaceType.upcase
       if surfaceType == 'FLOOR'
-        material = materials[0]
+        material = floor_material
       elsif surfaceType == 'WALL'
-        material = materials[1]
+        material = wall_material
       elsif surfaceType == 'ROOFCEILING'
-        material = materials[2]    
+        material = roof_material  
       end
   
       geometries, user_datas = make_geometries(surface)
@@ -423,10 +582,15 @@ class VA3C
         scene_child.geometry = geometry[:uuid]
         
         if i == 0
+          # first geometry is base surface
           scene_child.material = material[:uuid]
         else
-          # sub surface, assign window 
-          scene_child.material =  materials[3][:uuid]
+          # sub surface
+          if /Window/.match(user_data[:surfaceType]) || /Glass/.match(user_data[:surfaceType]) 
+            scene_child.material =  window_material[:uuid]
+          else
+            scene_child.material =  door_material[:uuid]
+          end
         end
         
         scene_child.matrix = identity_matrix
@@ -438,13 +602,20 @@ class VA3C
     
     # loop over all shading surfaces
     model.getShadingSurfaces.each do |surface|
-
-      material = materials[4]    
   
       geometries, user_datas = make_shade_geometries(surface)
       geometries.each_index do |i| 
         geometry = geometries[i]
         user_data = user_datas[i]
+        
+        material = nil
+        if /Site/.match(user_data[:surfaceType])
+          material = site_shading_material
+        elsif /Building/.match(user_data[:surfaceType]) 
+          material = building_shading_material
+        elsif /Space/.match(user_data[:surfaceType]) 
+          material = space_shading_material
+        end
         
         all_geometries << geometry
 
