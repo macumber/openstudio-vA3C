@@ -152,24 +152,65 @@ function animate(timestamp) {
 }
 </script>
 <script>
+var endRadius = Math.sqrt(30000);
+var cameraToPosition = function (position) {
+  return function() {
+    var startRadius = Math.sqrt(Math.pow(camera.position.x, 2)+Math.pow(camera.position.y, 2)+Math.pow(camera.position.z, 2));
+    var target = {
+      progress: 0,
+      start: {
+        x: camera.position.x,
+        y: camera.position.y,
+        z: camera.position.z,
+        r: startRadius,
+        theta: Math.acos(camera.position.z / startRadius),
+        phi: Math.atan2(camera.position.y, camera.position.x)
+      },
+      end: {
+        x: position.x,
+        y: position.y,
+        z: position.z,
+        r: endRadius,
+        theta: Math.acos(position.z / endRadius),
+        phi: Math.atan2(position.y, position.x)
+      }
+    };
+    /*console.debug('===========================');
+    console.debug('START');
+    console.debug('x: ' + camera.position.x + '    y: ' + camera.position.y + '    z: ' + camera.position.z);
+    console.debug('θ: ' + (target.start.theta * 180 / Math.PI).toFixed(3) + '°    φ: ' + (target.start.phi * 180 / Math.PI).toFixed(3) + '°');
+    console.debug('END');
+    console.debug('x: ' + position.x + '    y: ' + position.y + '    z: ' + position.z);
+    console.debug('θ: ' + (target.end.theta * 180 / Math.PI).toFixed(3) + '°    φ: ' + (target.end.phi * 180 / Math.PI).toFixed(3) + '°');
+    console.debug('===========================');*/
+    TweenLite.to(target, 1, {
+      progress: 1,
+      ease: Power3.easeInOut,
+      onUpdate: function (tween) {
+        var r = tween.target.start.r + tween.target.progress * (tween.target.end.r - tween.target.start.r);
+        var theta = tween.target.start.theta + tween.target.progress * (tween.target.end.theta - tween.target.start.theta);
+        var phi = tween.target.start.phi + tween.target.progress * (tween.target.end.phi - tween.target.start.phi);
+        var x = r * Math.sin(theta) * Math.cos(phi);
+        var y = r * Math.sin(theta) * Math.sin(phi);
+        var z = r * Math.cos(theta);
+        //console.debug('θ: ' + (theta * 180 / Math.PI).toFixed(3) + '°    φ: ' + (phi * 180 / Math.PI).toFixed(3) + '°');
+        camera.position.set(x, y, z);
+      },
+      onUpdateParams: ["{self}"]
+    });
+  }
+}
+
 var settings = {
   renderBy: 'Space Type',
   show: 'All stories',
-  zoomExtents: function() {
+  zoomExtents: function () {
     console.log('View: extents');
   },
-  xView: function() {
-    TweenLite.to(camera.position,1,{x:Math.sqrt(3*Math.pow(100, 2)),y:0,z:0});
-  },
-  yView: function() {
-    TweenLite.to(camera.position,1,{x:0,y:Math.sqrt(3*Math.pow(100, 2)),z:0});
-  },
-  zView: function() {
-    TweenLite.to(camera.position,1,{x:0,y:0,z:Math.sqrt(3*Math.pow(100, 2))});
-  },
-  reset: function() {
-    TweenLite.to(camera.position,1,{x:100,y:100,z:100});
-  },
+  xView: cameraToPosition(new THREE.Vector3(endRadius, 0, 0)),
+  yView: cameraToPosition(new THREE.Vector3(0, endRadius, 0)),
+  zView: cameraToPosition(new THREE.Vector3(0, 0, endRadius)),
+  reset: cameraToPosition(new THREE.Vector3(100, 100, 100)),
   xSection: 0,
   ySection: 0,
   zSection: 0
