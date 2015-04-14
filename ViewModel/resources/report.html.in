@@ -12,10 +12,9 @@
 <body>
 <script>
 var os_data = <%=os_data %>;
-
 var info, renderer, scene, camera, controls, light;
-
-var project, materials;
+var perspectiveCamera, orthographicCamera, perspectiveControls, orthographicControls;
+var project, materials, settings;
 
 var raycaster;
 var mouse;
@@ -34,6 +33,82 @@ function parseMaterials(json) {
     materials[ data.name ] = material;
   }
   return materials;
+};
+
+function cameraLookAt() {
+  return new THREE.Vector3(os_data.metadata.boundingBox.lookAtX, os_data.metadata.boundingBox.lookAtZ, -os_data.metadata.boundingBox.lookAtY);
+};
+
+function cameraRadius() {
+  return 4 * os_data.metadata.boundingBox.lookAtR;
+};
+
+// theta is rotation about OpenStudio Z in degrees, phi is rotation above ground plane in degrees
+function setCameraAngles(theta, phi, doTween) {
+  var aim = cameraLookAt();
+
+  var startRadius = Math.sqrt(Math.pow(camera.position.x - aim.x, 2) + Math.pow(camera.position.y - aim.y, 2) + Math.pow(camera.position.z - aim.z, 2));
+  var endRadius = cameraRadius();
+  var startZoom = camera.zoom;
+  var endZoom = 1;
+  var endX = endRadius * Math.cos(theta * Math.PI / 180.0) * Math.cos(phi * Math.PI / 180.0) + aim.x; // X in OpenStudio coordinates
+  var endY = endRadius * Math.sin(phi * Math.PI / 180.0) + aim.y; // Z in OpenStudio coordinates
+  var endZ = -endRadius * Math.sin(theta * Math.PI / 180.0) * Math.cos(phi * Math.PI / 180.0) + aim.z; // Y in OpenStudio coordinates
+  
+  if (doTween){
+    var target = {
+      progress: 0,
+      start: {
+        x: camera.position.x,
+        y: camera.position.y,
+        z: camera.position.z,
+        r: startRadius,
+        theta: Math.acos(camera.position.z / startRadius),
+        phi: Math.atan2(camera.position.y, camera.position.x),
+        zoom: startZoom
+      },
+      end: {
+        x: endX,
+        y: endY,
+        z: endZ,
+        r: endRadius,
+        theta: Math.acos(endZ / endRadius),
+        phi: Math.atan2(endY, endX),
+        zoom: endZoom
+      }
+    };
+    /*console.debug('===========================');
+    console.debug('START');
+    console.debug('x: ' + camera.position.x + '    y: ' + camera.position.y + '    z: ' + camera.position.z);
+    console.debug('θ: ' + (target.start.theta * 180 / Math.PI).toFixed(3) + '°    φ: ' + (target.start.phi * 180 / Math.PI).toFixed(3) + '°');
+    console.debug('END');
+    console.debug('x: ' + position.x + '    y: ' + position.y + '    z: ' + position.z);
+    console.debug('θ: ' + (target.end.theta * 180 / Math.PI).toFixed(3) + '°    φ: ' + (target.end.phi * 180 / Math.PI).toFixed(3) + '°');
+    console.debug('===========================');*/
+    TweenLite.to(target, 1, {
+      progress: 1,
+      ease: Power3.easeInOut,
+      onUpdate: function (tween) {
+        var r = tween.target.start.r + tween.target.progress * (tween.target.end.r - tween.target.start.r);
+        var theta = tween.target.start.theta + tween.target.progress * (tween.target.end.theta - tween.target.start.theta);
+        var phi = tween.target.start.phi + tween.target.progress * (tween.target.end.phi - tween.target.start.phi);
+        var zoom = tween.target.start.zoom + tween.target.progress * (tween.target.end.zoom - tween.target.start.zoom);
+        var x = r * Math.sin(theta) * Math.cos(phi);
+        var y = r * Math.sin(theta) * Math.sin(phi);
+        var z = r * Math.cos(theta); 
+        //console.debug('θ: ' + (theta * 180 / Math.PI).toFixed(3) + '°    φ: ' + (phi * 180 / Math.PI).toFixed(3) + '°');
+        camera.position.set(x, y, z);
+        camera.zoom = zoom;
+        camera.updateProjectionMatrix();
+      },
+      onUpdateParams: ["{self}"]
+    });
+    
+  }else{
+    camera.position.set(endX, endY, endZ);
+    camera.zoom = endZoom;
+    camera.updateProjectionMatrix();
+  }
 };
 
 function init() {
@@ -60,15 +135,34 @@ function init() {
   document.body.appendChild(renderer.domElement);
 
   scene = new THREE.Scene();
-
-  camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 5000);
-  camera.position.set(100, 100, 100);
-  scene.add(camera); // for light to follow
+  
+  aspect = window.innerWidth / window.innerHeight;
+  orthographicCamera = new THREE.OrthographicCamera( 4*aspect*os_data.metadata.boundingBox.lookAtR / - 2, 4*aspect*os_data.metadata.boundingBox.lookAtR / 2, 4*os_data.metadata.boundingBox.lookAtR / 2, 4*os_data.metadata.boundingBox.lookAtR / - 2, 1, 5000 );
+  scene.add(orthographicCamera); // for light to follow
+  orthographicCamera.lookAt(cameraLookAt());
+  orthographicCamera.up.set(0,1,0);
+  
+  perspectiveCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 5000);
+  scene.add(perspectiveCamera); // for light to follow
+  perspectiveCamera.lookAt(cameraLookAt());
+  perspectiveCamera.up.set(0,1,0);
+  
+  camera = perspectiveCamera;
+  
+  setCameraAngles(-30, 30, false);
 
   // Controls
-  controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.minDistance = 10;
-  controls.maxDistance = 1000;
+  orthographicControls = new THREE.OrbitControls(orthographicCamera, renderer.domElement);
+  orthographicControls.minDistance = 10;
+  orthographicControls.maxDistance = 1000;
+  orthographicControls.enabled = false;
+  
+  perspectiveControls = new THREE.OrbitControls(perspectiveCamera, renderer.domElement);
+  perspectiveControls.minDistance = 10;
+  perspectiveControls.maxDistance = 1000;
+  perspectiveControls.enabled = true;
+  
+  controls = perspectiveControls;
 
   // Lights
   light = new THREE.AmbientLight(0xbbbbbb);
@@ -89,6 +183,13 @@ function init() {
     edges = new THREE.EdgesHelper( object, 0x000000 );
     scene.add( edges );
   }
+  
+  var sg = new THREE.SphereGeometry( 1, 32, 32 ); 
+  var sm = new THREE.MeshBasicMaterial( {color: 0xff0000} ); 
+  var s = new THREE.Mesh( sg, sm ); 
+  scene.add( s );
+  s.position.set(cameraLookAt().x, cameraLookAt().y, cameraLookAt().z);
+  console.log(s);
   
   raycaster = new THREE.Raycaster();
   mouse = new THREE.Vector2();
@@ -198,74 +299,24 @@ function animate(timestamp) {
   controls.update();
   renderer.render(scene, camera);
 }
-</script>
-<script>
-var endRadius = Math.sqrt(30000);
-var cameraToPosition = function (position) {
-  return function() {
-    var startRadius = Math.sqrt(Math.pow(camera.position.x, 2)+Math.pow(camera.position.y, 2)+Math.pow(camera.position.z, 2));
-    var target = {
-      progress: 0,
-      start: {
-        x: camera.position.x,
-        y: camera.position.y,
-        z: camera.position.z,
-        r: startRadius,
-        theta: Math.acos(camera.position.z / startRadius),
-        phi: Math.atan2(camera.position.y, camera.position.x)
-      },
-      end: {
-        x: position.x,
-        y: position.y,
-        z: position.z,
-        r: endRadius,
-        theta: Math.acos(position.z / endRadius),
-        phi: Math.atan2(position.y, position.x)
-      }
-    };
-    /*console.debug('===========================');
-    console.debug('START');
-    console.debug('x: ' + camera.position.x + '    y: ' + camera.position.y + '    z: ' + camera.position.z);
-    console.debug('θ: ' + (target.start.theta * 180 / Math.PI).toFixed(3) + '°    φ: ' + (target.start.phi * 180 / Math.PI).toFixed(3) + '°');
-    console.debug('END');
-    console.debug('x: ' + position.x + '    y: ' + position.y + '    z: ' + position.z);
-    console.debug('θ: ' + (target.end.theta * 180 / Math.PI).toFixed(3) + '°    φ: ' + (target.end.phi * 180 / Math.PI).toFixed(3) + '°');
-    console.debug('===========================');*/
-    TweenLite.to(target, 1, {
-      progress: 1,
-      ease: Power3.easeInOut,
-      onUpdate: function (tween) {
-        var r = tween.target.start.r + tween.target.progress * (tween.target.end.r - tween.target.start.r);
-        var theta = tween.target.start.theta + tween.target.progress * (tween.target.end.theta - tween.target.start.theta);
-        var phi = tween.target.start.phi + tween.target.progress * (tween.target.end.phi - tween.target.start.phi);
-        var x = r * Math.sin(theta) * Math.cos(phi);
-        var y = r * Math.sin(theta) * Math.sin(phi);
-        var z = r * Math.cos(theta);
-        //console.debug('θ: ' + (theta * 180 / Math.PI).toFixed(3) + '°    φ: ' + (phi * 180 / Math.PI).toFixed(3) + '°');
-        camera.position.set(x, y, z);
-      },
-      onUpdateParams: ["{self}"]
-    });
-  }
-}
 
-var settings = {
+settings = {
   renderBy: 'Surface Type',
   showStory: 'All Stories',
   zoomExtents: function () {
     console.log('View: extents');
   },
-  xView: cameraToPosition(new THREE.Vector3(endRadius, 0, 0)),
-  yView: cameraToPosition(new THREE.Vector3(0, endRadius, 0)),
-  zView: cameraToPosition(new THREE.Vector3(0, 0, endRadius)),
-  reset: cameraToPosition(new THREE.Vector3(100, 100, 100)),
+  xView: function(){ setCameraAngles(0, 0, true); },
+  yView: function(){ setCameraAngles(-90, 0, true); },
+  zView: function(){ setCameraAngles(0, 90, true); },
+  reset: function(){ setCameraAngles(-30, 30, true); },
+  orthographic: false,
   xSection: 0,
   ySection: 0,
   zSection: 0
 };
 
 var update = function (value) {
-
 
   renderBy = settings.renderBy;
   showStory = settings.showStory;
@@ -322,7 +373,23 @@ window.onload = function() {
     gui.add(settings, 'showStory', building_story_names).name('Show Story').onChange(update);
     
     var f1 = gui.addFolder('Camera');
-    f1.add(settings, 'zoomExtents').name('Zoom extents');
+    f1.add(settings, 'orthographic').name('Orthographic').onChange( function(newValue){
+      if (newValue){
+        orthographicCamera.position.set(perspectiveCamera.position.x, perspectiveCamera.position.y, perspectiveCamera.position.z);
+        //orthographicCamera.zoom = perspectiveCamera.zoom;
+        camera = orthographicCamera;
+        orthographicControls.enabled = true;
+        perspectiveControls.enabled = false;
+        controls = orthographicControls;
+      }else{
+        perspectiveCamera.position.set(orthographicCamera.position.x, orthographicCamera.position.y, orthographicCamera.position.z);
+        //perspectiveCamera.zoom = orthographicCamera.zoom;
+        camera = perspectiveCamera;
+        orthographicControls.enabled = false;
+        perspectiveControls.enabled = true;
+        controls = perspectiveControls;        
+      }
+    });
     f1.add(settings, 'xView').name('X View');
     f1.add(settings, 'yView').name('Y View');
     f1.add(settings, 'zView').name('Z View');

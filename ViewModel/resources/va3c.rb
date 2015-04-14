@@ -51,8 +51,22 @@ class VA3C
     model.getPlanarSurfaceGroups.each do |group|
       boundingBox.add(group.transformation*group.boundingBox)
     end
+    
+    lookAtX = 0 # (boundingBox.minX.get + boundingBox.maxX.get) / 2.0
+    lookAtY = 0 # (boundingBox.minY.get + boundingBox.maxY.get) / 2.0
+    lookAtZ = 0 # (boundingBox.minZ.get + boundingBox.maxZ.get) / 2.0
+    lookAtR = [Math.sqrt( (boundingBox.maxX.get/2.0)**2 + (boundingBox.maxY.get/2.0)**2 + (boundingBox.maxZ.get/2.0)**2 ),
+               Math.sqrt( (boundingBox.minX.get/2.0)**2 + (boundingBox.maxY.get/2.0)**2 + (boundingBox.maxZ.get/2.0)**2 ),
+               Math.sqrt( (boundingBox.maxX.get/2.0)**2 + (boundingBox.minY.get/2.0)**2 + (boundingBox.maxZ.get/2.0)**2 ),
+               Math.sqrt( (boundingBox.maxX.get/2.0)**2 + (boundingBox.maxY.get/2.0)**2 + (boundingBox.minZ.get/2.0)**2 ),
+               Math.sqrt( (boundingBox.minX.get/2.0)**2 + (boundingBox.minY.get/2.0)**2 + (boundingBox.maxZ.get/2.0)**2 ),
+               Math.sqrt( (boundingBox.minX.get/2.0)**2 + (boundingBox.maxY.get/2.0)**2 + (boundingBox.minZ.get/2.0)**2 ),
+               Math.sqrt( (boundingBox.maxX.get/2.0)**2 + (boundingBox.minY.get/2.0)**2 + (boundingBox.minZ.get/2.0)**2 ),
+               Math.sqrt( (boundingBox.minX.get/2.0)**2 + (boundingBox.minY.get/2.0)**2 + (boundingBox.minZ.get/2.0)**2 )].max
+               
     boundingBoxHash = {'minX' => boundingBox.minX.get, 'minY' => boundingBox.minY.get, 'minZ' => boundingBox.minZ.get,
-                       'maxX' => boundingBox.maxX.get, 'maxY' => boundingBox.maxY.get, 'maxZ' => boundingBox.maxZ.get}
+                       'maxX' => boundingBox.maxX.get, 'maxY' => boundingBox.maxY.get, 'maxZ' => boundingBox.maxZ.get,
+                       'lookAtX' => lookAtX, 'lookAtY' => lookAtY, 'lookAtZ' => lookAtZ, 'lookAtR' => lookAtR}
     
     buildingStoryNames = []
     model.getBuildingStorys.each do |buildingStory|
