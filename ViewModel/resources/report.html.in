@@ -14,9 +14,8 @@
 var os_data = <%=os_data %>;
 
 var info, renderer, scene, camera, controls, light;
-var geometry, material, mesh, helper;
 
-var project;
+var project, materials;
 
 var raycaster;
 var mouse;
@@ -24,6 +23,18 @@ var intersected, selected_material;
 
 init();
 animate();
+
+function parseMaterials(json) {
+  var materials = {};
+  var loader = new THREE.MaterialLoader();
+  for ( var i = 0, l = json.length; i < l; i ++ ) {
+    var data = json[ i ];
+    var material = loader.parse( data );
+    material.uuid = data.uuid;
+    materials[ data.name ] = material;
+  }
+  return materials;
+};
 
 function init() {
 
@@ -68,11 +79,17 @@ function init() {
 
   project = new THREE.Object3D();
   scene.add(project);
-
+  
   var loader = new THREE.ObjectLoader();
   data = loader.parse(os_data);
   project.add(data);
-
+  
+  scene_objects = project.children[0].children;
+  for ( object of scene_objects ) {
+    edges = new THREE.EdgesHelper( object, 0x000000 );
+    scene.add( edges );
+  }
+  
   raycaster = new THREE.Raycaster();
   mouse = new THREE.Vector2();
 
@@ -84,6 +101,8 @@ function init() {
     shininess: 50,
     side: THREE.DoubleSide
   });
+  
+  materials = parseMaterials(os_data.materials);
 
   document.addEventListener('click', onDocumentMouseClick, false);
 }
@@ -117,16 +136,45 @@ function onDocumentMouseClick(event) {
       headsUp.style.top = -10 + 0.5 * window.innerHeight - mouse.y * 0.5 * window.innerHeight + 'px';
       headsUp.style.display = '';
 
-      var txt = '<h3 style="margin:0;" >OSM Data Viewer / Three.js id:' + intersected.id + '</h3>' +
-        'Handle: <small>' + intersected.userData.handle + '</small><br>' +
-        'Name: ' + intersected.userData.name + '<br>' +
-        'Surface Type: ' + intersected.userData.surfaceType + '<br>' +
-        'Space Name: <small>' + intersected.userData.spaceName + '</small><br>' +
-        'Thermal Zone: <small>' + intersected.userData.thermalZoneName + '</small><br>' +
-        'Outside Boundary Condition: ' + intersected.userData.outsideBoundaryCondition + '<br>' +
-        'Sun Exposure: ' + intersected.userData.sunExposure + '<br>' +
-        'Wind Exposure: ' + intersected.userData.windExposure + '<br>' +
-        '';
+      var txt;
+      switch (settings.renderBy) {
+        case "Surface Type":
+          txt = 'Name: ' + intersected.userData.name + '<br>' +
+                'Surface Type: ' + intersected.userData.surfaceType + '<br>' +
+                'Space Name: ' + intersected.userData.spaceName + '<br>' +
+                '';
+          break;
+        case "Boundary":
+          txt = 'Name: ' + intersected.userData.name + '<br>' +
+                'Outside Boundary Condition: ' + intersected.userData.outsideBoundaryCondition + '<br>' +
+                'Sun Exposure: ' + intersected.userData.sunExposure + '<br>' +
+                'Wind Exposure: ' + intersected.userData.windExposure + '<br>' +
+                '';
+          break;
+        case "Construction":
+          txt = 'Name: ' + intersected.userData.name + '<br>' +
+                'Construction Name: ' + intersected.userData.constructionName + '<br>' +
+                '';
+          break;
+        case "Thermal Zone":
+          txt = 'Name: ' + intersected.userData.name + '<br>' +
+                'Thermal Zone: ' + intersected.userData.thermalZoneName + '<br>' +
+                '';
+          break;
+        case "Space Type":
+          txt = 'Name: ' + intersected.userData.name + '<br>' +
+                'Space Type: ' + intersected.userData.spaceTypeName + '<br>' +
+                '';
+          break;        
+        case "Building Story":
+          txt = 'Name: ' + intersected.userData.name + '<br>' +
+                'Story Name: ' + intersected.userData.buildingStoryName + '<br>' +
+                '';
+          break;
+        case "Data":
+          break;        
+      }
+
       headsUp.innerHTML = txt;
 
     }
@@ -202,8 +250,8 @@ var cameraToPosition = function (position) {
 }
 
 var settings = {
-  renderBy: 'Space Type',
-  show: 'All stories',
+  renderBy: 'Surface Type',
+  showStory: 'All Stories',
   zoomExtents: function () {
     console.log('View: extents');
   },
@@ -216,14 +264,63 @@ var settings = {
   zSection: 0
 };
 
+var update = function (value) {
+
+
+  renderBy = settings.renderBy;
+  showStory = settings.showStory;
+  allStories = (showStory == 'All Stories');
+
+  scene_objects = project.children[0].children;
+  for ( object of scene_objects ) {
+  
+    object.visible = true;
+  
+    if (allStories || showStory == object.userData.buildingStoryName){
+      // no-op
+    }else{
+      object.visible = false;
+    }
+    
+    var material = null;
+    switch (renderBy) {
+      case "Surface Type":
+        material = materials[object.userData.surfaceTypeMaterialName];
+        break;
+      case "Boundary":
+        material = materials[object.userData.boundaryMaterialName];
+        break;
+      case "Construction":
+        material = materials[object.userData.constructionMaterialName];
+        break;
+      case "Thermal Zone":
+        material = materials[object.userData.thermalZoneMaterialName];
+        break;
+      case "Space Type":
+        material = materials[object.userData.spaceTypeMaterialName];
+        break;        
+      case "Building Story":
+        material = materials[object.userData.buildingStoryMaterialName];
+        break;
+      case "Data":
+        break;        
+    }
+  
+    object.material = material;
+    if ( material != null){
+      object.material.needsUpdate = true; 
+    }
+  }
+};
+
 window.onload = function() {
   var gui = new dat.GUI();
-    gui.add(settings, 'renderBy', ['Space Type', 'Boundary', 'Thermal Zone', 'Data']).name('Render By').onChange(function (value) {
-      console.log('New renderBy: ' + value);
-    });
-    gui.add(settings, 'show', ['All stories', 'Story 1', 'Story 2', 'Story 3']).name('Show').onChange(function (value) {
-      console.log('New show: ' + value);
-    });
+    gui.add(settings, 'renderBy', ['Surface Type', 'Boundary', 'Construction', 'Thermal Zone', 'Space Type', 'Building Story', 'Data']).name('Render By').onChange(update);
+    
+    building_story_names = os_data.metadata.buildingStoryNames;
+    building_story_names.unshift('All Stories');
+    gui.add(settings, 'showStory', building_story_names).name('Show Story').onChange(update);
+    
     var f1 = gui.addFolder('Camera');
     f1.add(settings, 'zoomExtents').name('Zoom extents');
     f1.add(settings, 'xView').name('X View');
@@ -231,17 +328,19 @@ window.onload = function() {
     f1.add(settings, 'zView').name('Z View');
     f1.add(settings, 'reset').name('Reset');
     f1.open();
-    var f2 = gui.addFolder('Section Cut');
-    f2.add(settings, 'xSection', 0, 360).name('X Section').onChange(function (value) {
-      console.log('X cut: ' + value);
-    });
-    f2.add(settings, 'ySection', 0, 360).name('Y Section').onChange(function (value) {
-      console.log('Y cut: ' + value);
-    });
-    f2.add(settings, 'zSection', 0, 360).name('Z Section').onChange(function (value) {
-      console.log('Z cut: ' + value);
-    });
-    f2.open();
+    //var f2 = gui.addFolder('Section Cut');
+    //f2.add(settings, 'xSection', 0, 360).name('X Section').onChange(function (value) {
+    //  console.log('X cut: ' + value);
+    //});
+    //f2.add(settings, 'ySection', 0, 360).name('Y Section').onChange(function (value) {
+    //  console.log('Y cut: ' + value);
+    //});
+    //f2.add(settings, 'zSection', 0, 360).name('Z Section').onChange(function (value) {
+    //  console.log('Z cut: ' + value);
+    //});
+    //f2.open();
+    
+    update();
 };
 </script>
 </body>
