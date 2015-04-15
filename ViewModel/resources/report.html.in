@@ -12,13 +12,29 @@
 <body>
 <script>
 var os_data = <%=os_data %>;
-var info, renderer, scene, camera, controls, light;
+var info, renderer, scene, light;
 var perspectiveCamera, orthographicCamera, perspectiveControls, orthographicControls;
-var project, materials, settings;
+var project, materials;
 
 var raycaster;
 var mouse;
 var intersected, selected_material;
+
+var settings = {
+  renderBy: 'Surface Type',
+  showStory: 'All Stories',
+  zoomExtents: function () {
+    console.log('View: extents');
+  },
+  xView: function(){ setAllCameraAngles(0, 0, 1); },
+  yView: function(){ setAllCameraAngles(-90, 0, 1); },
+  zView: function(){ setAllCameraAngles(0, 90, 1); },
+  reset: function(){ setAllCameraAngles(-30, 30, 1); },
+  orthographic: false,
+  xSection: 0,
+  ySection: 0,
+  zSection: 0
+};
 
 init();
 animate();
@@ -43,72 +59,111 @@ function cameraRadius() {
   return 4 * os_data.metadata.boundingBox.lookAtR;
 };
 
-// theta is rotation about OpenStudio Z in degrees, phi is rotation above ground plane in degrees
-function setCameraAngles(theta, phi, doTween) {
-  var aim = cameraLookAt();
+function setAllCameraAngles(theta, phi, tweenTime) {
+  perspectiveTweenTime = tweenTime;
+  orthographicTweenTime = tweenTime;
+  if (settings.orthographic){
+    perspectiveTweenTime = 0;
+  }else{
+    orthographicTweenTime = 0;
+  }
+  setCameraAngles(perspectiveCamera, perspectiveControls, theta, phi, perspectiveTweenTime);
+  setCameraAngles(orthographicCamera, orthographicControls, theta, phi, orthographicTweenTime);
+};
 
+// theta is rotation about OpenStudio Z in degrees, phi is rotation above ground plane in degrees
+function setCameraAngles(camera, controls, theta, phi, tweenTime) {
+  var aim = cameraLookAt();
+  
   var startRadius = Math.sqrt(Math.pow(camera.position.x - aim.x, 2) + Math.pow(camera.position.y - aim.y, 2) + Math.pow(camera.position.z - aim.z, 2));
   var endRadius = cameraRadius();
-  var startZoom = camera.zoom;
-  var endZoom = 1;
   var endX = endRadius * Math.cos(theta * Math.PI / 180.0) * Math.cos(phi * Math.PI / 180.0) + aim.x; // X in OpenStudio coordinates
   var endY = endRadius * Math.sin(phi * Math.PI / 180.0) + aim.y; // Z in OpenStudio coordinates
   var endZ = -endRadius * Math.sin(theta * Math.PI / 180.0) * Math.cos(phi * Math.PI / 180.0) + aim.z; // Y in OpenStudio coordinates
   
-  if (doTween){
-    var target = {
-      progress: 0,
-      start: {
-        x: camera.position.x,
-        y: camera.position.y,
-        z: camera.position.z,
-        r: startRadius,
-        theta: Math.acos(camera.position.z / startRadius),
-        phi: Math.atan2(camera.position.y, camera.position.x),
-        zoom: startZoom
-      },
-      end: {
-        x: endX,
-        y: endY,
-        z: endZ,
-        r: endRadius,
-        theta: Math.acos(endZ / endRadius),
-        phi: Math.atan2(endY, endX),
-        zoom: endZoom
-      }
-    };
-    /*console.debug('===========================');
-    console.debug('START');
-    console.debug('x: ' + camera.position.x + '    y: ' + camera.position.y + '    z: ' + camera.position.z);
-    console.debug('θ: ' + (target.start.theta * 180 / Math.PI).toFixed(3) + '°    φ: ' + (target.start.phi * 180 / Math.PI).toFixed(3) + '°');
-    console.debug('END');
-    console.debug('x: ' + position.x + '    y: ' + position.y + '    z: ' + position.z);
-    console.debug('θ: ' + (target.end.theta * 180 / Math.PI).toFixed(3) + '°    φ: ' + (target.end.phi * 180 / Math.PI).toFixed(3) + '°');
-    console.debug('===========================');*/
-    TweenLite.to(target, 1, {
-      progress: 1,
-      ease: Power3.easeInOut,
-      onUpdate: function (tween) {
-        var r = tween.target.start.r + tween.target.progress * (tween.target.end.r - tween.target.start.r);
-        var theta = tween.target.start.theta + tween.target.progress * (tween.target.end.theta - tween.target.start.theta);
-        var phi = tween.target.start.phi + tween.target.progress * (tween.target.end.phi - tween.target.start.phi);
-        var zoom = tween.target.start.zoom + tween.target.progress * (tween.target.end.zoom - tween.target.start.zoom);
-        var x = r * Math.sin(theta) * Math.cos(phi);
-        var y = r * Math.sin(theta) * Math.sin(phi);
-        var z = r * Math.cos(theta); 
-        //console.debug('θ: ' + (theta * 180 / Math.PI).toFixed(3) + '°    φ: ' + (phi * 180 / Math.PI).toFixed(3) + '°');
-        camera.position.set(x, y, z);
-        camera.zoom = zoom;
-        camera.updateProjectionMatrix();
-      },
-      onUpdateParams: ["{self}"]
-    });
-    
-  }else{
-    camera.position.set(endX, endY, endZ);
-    camera.zoom = endZoom;
-    camera.updateProjectionMatrix();
-  }
+  var target = {
+    progress: 0,
+    start: {
+      x: camera.position.x,
+      y: camera.position.y,
+      z: camera.position.z,
+      r: startRadius,
+      theta: Math.acos(camera.position.z / startRadius),
+      phi: Math.atan2(camera.position.y, camera.position.x),
+      upX: camera.up.x,
+      upY: camera.up.y,
+      upZ: camera.up.z,
+      lookAtX: controls.target.x,
+      lookAtY: controls.target.y,
+      lookAtZ: controls.target.z,
+      targetX: controls.target.x,
+      targetY: controls.target.y,
+      targetZ: controls.target.z,
+      zoom: camera.zoom
+    },
+    end: {
+      x: endX,
+      y: endY,
+      z: endZ,
+      r: endRadius,
+      theta: Math.acos(endZ / endRadius),
+      phi: Math.atan2(endY, endX),
+      upX: 0,
+      upY: 1,
+      upZ: 0,
+      lookAtX: aim.x,
+      lookAtY: aim.y,
+      lookAtZ: aim.z,
+      targetX: aim.x,
+      targetY: aim.y,
+      targetZ: aim.z,
+      zoom: 1
+    }
+  };
+
+  TweenLite.to(target, tweenTime, {
+    progress: 1,
+    ease: Power3.easeInOut,
+    onUpdate: function (tween) {
+      var r = tween.target.start.r + tween.target.progress * (tween.target.end.r - tween.target.start.r);
+      var theta = tween.target.start.theta + tween.target.progress * (tween.target.end.theta - tween.target.start.theta);
+      var phi = tween.target.start.phi + tween.target.progress * (tween.target.end.phi - tween.target.start.phi);
+      var zoom = tween.target.start.zoom + tween.target.progress * (tween.target.end.zoom - tween.target.start.zoom);
+      var x = r * Math.sin(theta) * Math.cos(phi);
+      var y = r * Math.sin(theta) * Math.sin(phi);
+      var z = r * Math.cos(theta); 
+      var upX = tween.target.start.upX + tween.target.progress * (tween.target.end.upX - tween.target.start.upX);
+      var upY = tween.target.start.upY + tween.target.progress * (tween.target.end.upY - tween.target.start.upY);
+      var upZ = tween.target.start.upZ + tween.target.progress * (tween.target.end.upZ - tween.target.start.upZ);
+      var lookAtX = tween.target.start.lookAtX + tween.target.progress * (tween.target.end.lookAtX - tween.target.start.lookAtX);
+      var lookAtY = tween.target.start.lookAtY + tween.target.progress * (tween.target.end.lookAtY - tween.target.start.lookAtY);
+      var lookAtZ = tween.target.start.lookAtZ + tween.target.progress * (tween.target.end.lookAtZ - tween.target.start.lookAtZ);
+      var targetX = tween.target.start.targetX + tween.target.progress * (tween.target.end.targetX - tween.target.start.targetX);
+      var targetY = tween.target.start.targetY + tween.target.progress * (tween.target.end.targetY - tween.target.start.targetY);
+      var targetZ = tween.target.start.targetZ + tween.target.progress * (tween.target.end.targetZ - tween.target.start.targetZ);
+      
+      camera.position.set(x, y, z);
+      camera.zoom = zoom;
+      camera.up.set(upX, upY, upZ);
+      camera.lookAt(new THREE.Vector3(lookAtX, lookAtY, lookAtZ));
+      camera.updateProjectionMatrix();
+      
+      controls.target = new THREE.Vector3(targetX, targetY, targetZ);
+    },
+    onUpdateParams: ["{self}"],
+    onComplete: function () {
+      camera.position.set(endX, endY, endZ);
+      camera.zoom = 1;
+      camera.up.set(0, 1, 0);
+      camera.lookAt(aim);
+      camera.updateProjectionMatrix();
+      
+      controls.target = aim;
+    }
+  });
+  
+
+
 };
 
 function init() {
@@ -139,30 +194,27 @@ function init() {
   aspect = window.innerWidth / window.innerHeight;
   orthographicCamera = new THREE.OrthographicCamera( 4*aspect*os_data.metadata.boundingBox.lookAtR / - 2, 4*aspect*os_data.metadata.boundingBox.lookAtR / 2, 4*os_data.metadata.boundingBox.lookAtR / 2, 4*os_data.metadata.boundingBox.lookAtR / - 2, 1, 5000 );
   scene.add(orthographicCamera); // for light to follow
-  orthographicCamera.lookAt(cameraLookAt());
   orthographicCamera.up.set(0,1,0);
-  
+  orthographicCamera.lookAt(cameraLookAt());
+
   perspectiveCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 5000);
   scene.add(perspectiveCamera); // for light to follow
-  perspectiveCamera.lookAt(cameraLookAt());
   perspectiveCamera.up.set(0,1,0);
-  
-  camera = perspectiveCamera;
-  
-  setCameraAngles(-30, 30, false);
+  perspectiveCamera.lookAt(cameraLookAt());
 
   // Controls
   orthographicControls = new THREE.OrbitControls(orthographicCamera, renderer.domElement);
   orthographicControls.minDistance = 10;
   orthographicControls.maxDistance = 1000;
-  orthographicControls.enabled = false;
+  orthographicControls.enabled = true;
   
   perspectiveControls = new THREE.OrbitControls(perspectiveCamera, renderer.domElement);
   perspectiveControls.minDistance = 10;
   perspectiveControls.maxDistance = 1000;
   perspectiveControls.enabled = true;
   
-  controls = perspectiveControls;
+  // initialize camera and controls
+  setAllCameraAngles(-30, 30, 0);
 
   // Lights
   light = new THREE.AmbientLight(0xbbbbbb);
@@ -213,7 +265,11 @@ function onDocumentMouseClick(event) {
   mouse.x = (event.clientX / renderer.domElement.width) * 2 - 1;
   mouse.y = -(event.clientY / renderer.domElement.height) * 2 + 1;
 
-  raycaster.setFromCamera(mouse, camera);
+  if (settings.orthographic){
+    raycaster.setFromCamera(mouse, orthographicCamera);
+  }else{
+    raycaster.setFromCamera(mouse, perspectiveCamera);
+  }
   intersects = raycaster.intersectObjects(project.children[0].children);
 
   if (intersects.length) {
@@ -296,24 +352,13 @@ function onDocumentMouseClick(event) {
 
 function animate(timestamp) {
   requestAnimationFrame(animate);
-  controls.update();
-  renderer.render(scene, camera);
-}
-
-settings = {
-  renderBy: 'Surface Type',
-  showStory: 'All Stories',
-  zoomExtents: function () {
-    console.log('View: extents');
-  },
-  xView: function(){ setCameraAngles(0, 0, true); },
-  yView: function(){ setCameraAngles(-90, 0, true); },
-  zView: function(){ setCameraAngles(0, 90, true); },
-  reset: function(){ setCameraAngles(-30, 30, true); },
-  orthographic: false,
-  xSection: 0,
-  ySection: 0,
-  zSection: 0
+  orthographicControls.update();
+  perspectiveControls.update();
+  if (settings.orthographic){
+    renderer.render(scene, orthographicCamera);
+  }else{
+    renderer.render(scene, perspectiveCamera);
+  }
 };
 
 var update = function (value) {
@@ -375,19 +420,9 @@ window.onload = function() {
     var f1 = gui.addFolder('Camera');
     f1.add(settings, 'orthographic').name('Orthographic').onChange( function(newValue){
       if (newValue){
-        orthographicCamera.position.set(perspectiveCamera.position.x, perspectiveCamera.position.y, perspectiveCamera.position.z);
-        //orthographicCamera.zoom = perspectiveCamera.zoom;
-        camera = orthographicCamera;
-        orthographicControls.enabled = true;
-        perspectiveControls.enabled = false;
-        controls = orthographicControls;
+        //orthographicCamera.position.set(perspectiveCamera.position.x, perspectiveCamera.position.y, perspectiveCamera.position.z);
       }else{
-        perspectiveCamera.position.set(orthographicCamera.position.x, orthographicCamera.position.y, orthographicCamera.position.z);
-        //perspectiveCamera.zoom = orthographicCamera.zoom;
-        camera = perspectiveCamera;
-        orthographicControls.enabled = false;
-        perspectiveControls.enabled = true;
-        controls = perspectiveControls;        
+        //perspectiveCamera.position.set(orthographicCamera.position.x, orthographicCamera.position.y, orthographicCamera.position.z);
       }
     });
     f1.add(settings, 'xView').name('X View');
