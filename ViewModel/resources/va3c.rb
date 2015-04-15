@@ -91,7 +91,7 @@ class VA3C
     
   # format color
   def self.format_color(r, g, b)
-    return "0x#{r.to_s(16)}#{g.to_s(16)}#{b.to_s(16)}"
+    return "0x#{r.to_s(16).rjust(2,'0')}#{g.to_s(16).rjust(2,'0')}#{b.to_s(16).rjust(2,'0')}"
   end
   
   # create a material

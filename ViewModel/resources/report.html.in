@@ -12,7 +12,7 @@
 <body>
 <script>
 var os_data = <%=os_data %>;
-var info, renderer, scene, light;
+var info, renderer, scene, light, back_objects, data_clone;
 var perspectiveCamera, orthographicCamera, perspectiveControls, orthographicControls;
 var project, materials;
 
@@ -23,9 +23,12 @@ var intersected, selected_material;
 var settings = {
   renderBy: 'Surface Type',
   showStory: 'All Stories',
-  zoomExtents: function () {
-    console.log('View: extents');
-  },
+  showFloors: true,
+  showWalls: true,
+  showRoofCeilings: true,
+  showWindows: true,
+  showDoors: true,
+  showShading: true,
   xView: function(){ setAllCameraAngles(0, 0, 1); },
   yView: function(){ setAllCameraAngles(-90, 0, 1); },
   zView: function(){ setAllCameraAngles(0, 90, 1); },
@@ -161,9 +164,6 @@ function setCameraAngles(camera, controls, theta, phi, tweenTime) {
       controls.target = aim;
     }
   });
-  
-
-
 };
 
 function init() {
@@ -236,12 +236,12 @@ function init() {
     scene.add( edges );
   }
   
-  var sg = new THREE.SphereGeometry( 1, 32, 32 ); 
-  var sm = new THREE.MeshBasicMaterial( {color: 0xff0000} ); 
-  var s = new THREE.Mesh( sg, sm ); 
-  scene.add( s );
-  s.position.set(cameraLookAt().x, cameraLookAt().y, cameraLookAt().z);
-  console.log(s);
+  // show look at point
+  //var sg = new THREE.SphereGeometry( 1, 32, 32 ); 
+  //var sm = new THREE.MeshBasicMaterial( {color: 0xff0000} ); 
+  //var s = new THREE.Mesh( sg, sm ); 
+  //scene.add( s );
+  //s.position.set(cameraLookAt().x, cameraLookAt().y, cameraLookAt().z);
   
   raycaster = new THREE.Raycaster();
   mouse = new THREE.Vector2();
@@ -255,7 +255,34 @@ function init() {
     side: THREE.DoubleSide
   });
   
+  normal_material_front = new THREE.MeshPhongMaterial({
+    color: 0xff0000,
+    ambient: 0xff0000,
+    specular: 0xff0000,
+    emissive: 0xff0000,
+    shininess: 50,
+    side: THREE.FrontSide
+  });
+  
+  normal_material_back = new THREE.MeshPhongMaterial({
+    color: 0xffffff,
+    ambient: 0xffffff,
+    specular: 0xffffff,
+    emissive: 0xffffff,
+    shininess: 50,
+    side: THREE.BackSide
+  });
+  
   materials = parseMaterials(os_data.materials);
+  
+  back_objects = [];
+  data_clone = data.clone();
+  for ( object of data_clone.children ) {
+    object.material = normal_material_back;
+    object.visible = false;
+    scene.add(object);
+    back_objects.push(scene.children[scene.children.length-1]);
+  }
 
   document.addEventListener('click', onDocumentMouseClick, false);
 }
@@ -270,8 +297,10 @@ function onDocumentMouseClick(event) {
   }else{
     raycaster.setFromCamera(mouse, perspectiveCamera);
   }
-  intersects = raycaster.intersectObjects(project.children[0].children);
-
+  
+  // raycaster intersects invisible obejcts so filter first
+  var pickable = project.children[0].children.filter(function(x){return x.visible});
+  intersects = raycaster.intersectObjects(pickable);
   if (intersects.length) {
     // new intersected object
     if (intersected != intersects[0].object) {
@@ -366,9 +395,28 @@ var update = function (value) {
   renderBy = settings.renderBy;
   showStory = settings.showStory;
   allStories = (showStory == 'All Stories');
+  
+  showFloors = settings.showFloors;
+  showWalls = settings.showWalls;
+  showRoofCeilings = settings.showRoofCeilings;
+  showWindows = settings.showWindows;
+  showDoors = settings.showDoors;
+  showShading = settings.showShading;
+  
+  if (renderBy == "Normal"){
+    for ( object of back_objects ) {
+      object.visible = true;
+    }
+  }else{
+    for ( object of back_objects ) {
+      object.visible = false;
+    }
+  }
 
   scene_objects = project.children[0].children;
   for ( object of scene_objects ) {
+  
+    surfaceType = object.userData.surfaceType;
   
     object.visible = true;
   
@@ -378,10 +426,27 @@ var update = function (value) {
       object.visible = false;
     }
     
+    if (!showFloors && surfaceType == 'Floor'){
+      object.visible = false;
+    }else if (!showWalls && surfaceType == 'Wall'){
+      object.visible = false;
+    }else if (!showRoofCeilings && surfaceType == 'RoofCeiling'){
+      object.visible = false;
+    }else if (!showWindows && surfaceType.indexOf('Window') > -1){
+      object.visible = false;
+    }else if (!showDoors && surfaceType.indexOf('Door') > -1){
+      object.visible = false;
+    }else if (!showShading && (surfaceType.indexOf('Shading') > -1)){
+      object.visible = false;
+    }
+    
     var material = null;
     switch (renderBy) {
       case "Surface Type":
         material = materials[object.userData.surfaceTypeMaterialName];
+        break;
+      case "Normal":
+        material = normal_material_front;
         break;
       case "Boundary":
         material = materials[object.userData.boundaryMaterialName];
@@ -411,38 +476,52 @@ var update = function (value) {
 
 window.onload = function() {
   var gui = new dat.GUI();
-    gui.add(settings, 'renderBy', ['Surface Type', 'Boundary', 'Construction', 'Thermal Zone', 'Space Type', 'Building Story', 'Data']).name('Render By').onChange(update);
-    
-    building_story_names = os_data.metadata.buildingStoryNames;
-    building_story_names.unshift('All Stories');
-    gui.add(settings, 'showStory', building_story_names).name('Show Story').onChange(update);
-    
-    var f1 = gui.addFolder('Camera');
-    f1.add(settings, 'orthographic').name('Orthographic').onChange( function(newValue){
-      if (newValue){
-        //orthographicCamera.position.set(perspectiveCamera.position.x, perspectiveCamera.position.y, perspectiveCamera.position.z);
-      }else{
-        //perspectiveCamera.position.set(orthographicCamera.position.x, orthographicCamera.position.y, orthographicCamera.position.z);
-      }
-    });
-    f1.add(settings, 'xView').name('X View');
-    f1.add(settings, 'yView').name('Y View');
-    f1.add(settings, 'zView').name('Z View');
-    f1.add(settings, 'reset').name('Reset');
-    f1.open();
-    //var f2 = gui.addFolder('Section Cut');
-    //f2.add(settings, 'xSection', 0, 360).name('X Section').onChange(function (value) {
-    //  console.log('X cut: ' + value);
-    //});
-    //f2.add(settings, 'ySection', 0, 360).name('Y Section').onChange(function (value) {
-    //  console.log('Y cut: ' + value);
-    //});
-    //f2.add(settings, 'zSection', 0, 360).name('Z Section').onChange(function (value) {
-    //  console.log('Z cut: ' + value);
-    //});
-    //f2.open();
-    
-    update();
+  gui.add(settings, 'renderBy', ['Surface Type', 'Normal', 'Boundary', 'Construction', 'Thermal Zone', 'Space Type', 'Building Story', 'Data']).name('Render By').onChange(update);
+  
+  building_story_names = os_data.metadata.buildingStoryNames;
+  building_story_names.unshift('All Stories');
+  gui.add(settings, 'showStory', building_story_names).name('Show Story').onChange(update);
+  
+  var f1 = gui.addFolder('Surface Filters');
+  f1.add(settings, 'showFloors').name('Show Floors').onChange(update);
+  f1.add(settings, 'showWalls').name('Show Walls').onChange(update);
+  f1.add(settings, 'showRoofCeilings').name('Show Roofs').onChange(update);
+  f1.add(settings, 'showWindows').name('Show Windows').onChange(update);
+  f1.add(settings, 'showDoors').name('Show Doors').onChange(update);
+  f1.add(settings, 'showShading').name('Show Shading').onChange(update);
+  f1.open();
+
+  var f2 = gui.addFolder('Camera');
+  f2.add(settings, 'orthographic').name('Orthographic');
+  f2.add(settings, 'xView').name('X View');
+  f2.add(settings, 'yView').name('Y View');
+  f2.add(settings, 'zView').name('Z View');
+  f2.add(settings, 'reset').name('Reset');
+  f2.open();
+  
+  //var f2 = gui.addFolder('Section Cut');
+  //f2.add(settings, 'xSection', 0, 360).name('X Section').onChange(function (value) {
+  //  console.log('X cut: ' + value);
+  //});
+  //f2.add(settings, 'ySection', 0, 360).name('Y Section').onChange(function (value) {
+  //  console.log('Y cut: ' + value);
+  //});
+  //f2.add(settings, 'zSection', 0, 360).name('Z Section').onChange(function (value) {
+  //  console.log('Z cut: ' + value);
+  //});
+  //f2.open();
+  
+  //if (os_data.metadata.hasData){
+    var f3 = gui.addFolder('Data Rendering');
+    f3.add(settings, 'orthographic').name('Orthographic');
+    f3.add(settings, 'xView').name('X View');
+    f3.add(settings, 'yView').name('Y View');
+    f3.add(settings, 'zView').name('Z View');
+    f3.add(settings, 'reset').name('Reset');
+    f3.open();
+  //}
+  
+  update();
 };
 </script>
 </body>
