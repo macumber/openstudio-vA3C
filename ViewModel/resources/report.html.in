@@ -12,7 +12,7 @@
 <body>
 <script>
 var os_data = <%=os_data %>;
-var info, renderer, scene, light, scene_objects, coincident_objects, back_objects;
+var info, renderer, scene, light, scene_objects, scene_edges, object_edges, coincident_objects, back_objects;
 var perspectiveCamera, orthographicCamera, perspectiveControls, orthographicControls;
 var project, materials;
 
@@ -29,6 +29,7 @@ var settings = {
   showWindows: true,
   showDoors: true,
   showShading: true,
+  showWireframe: false,
   xView: function(){ setAllCameraAngles(0, 0, 1); },
   yView: function(){ setAllCameraAngles(-90, 0, 1); },
   zView: function(){ setAllCameraAngles(0, 90, 1); },
@@ -221,9 +222,25 @@ function init() {
   light = new THREE.AmbientLight(0xbbbbbb);
   scene.add(light);
 
-  var axisHelper = new THREE.AxisHelper(50);
-  scene.add(axisHelper);
-
+  // Axes, adapted from AxisHelper.js
+  var axisSize = cameraRadius();
+  
+  var xAxisMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 }); 
+  var xAxisGeometry = new THREE.Geometry(); 
+  xAxisGeometry.vertices.push( new THREE.Vector3(0,0,0), new THREE.Vector3(axisSize,0,0)); 
+  scene.add( new THREE.Line( xAxisGeometry, xAxisMaterial ) );
+  
+  var yAxisMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 }); 
+  var yAxisGeometry = new THREE.Geometry(); 
+  yAxisGeometry.vertices.push( new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,-axisSize)); 
+  scene.add( new THREE.Line( yAxisGeometry, yAxisMaterial ) );
+  
+  var zAxisMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff }); 
+  var zAxisGeometry = new THREE.Geometry(); 
+  zAxisGeometry.vertices.push( new THREE.Vector3(0,0,0), new THREE.Vector3(0,axisSize,0)); 
+  scene.add( new THREE.Line( zAxisGeometry, zAxisMaterial ) );
+  
+  // scene
   project = new THREE.Object3D();
   scene.add(project);
   
@@ -250,11 +267,15 @@ function init() {
   
   // back_objects are copies of scene_objects that exist only so we can color their back sides
   // objects that have coincident objects do not get a back object
+  scene_edges = [];
   back_objects = {};
+  object_edges = {};
   for ( object of scene_objects ) {
     edges = new THREE.EdgesHelper( object, 0x000000 );
     scene.add(edges);
     edge = scene.children[scene.children.length-1];
+    scene_edges.push(edge);
+    object_edges[object.uuid] = edge;
     
     if (coincident_objects[object.uuid] == null){
       back_object = object.clone();
@@ -478,6 +499,7 @@ var update = function (value) {
   showWindows = settings.showWindows;
   showDoors = settings.showDoors;
   showShading = settings.showShading;
+  showWireframe = settings.showWireframe;
 
   for ( object of scene_objects ) {
   
@@ -548,6 +570,13 @@ var update = function (value) {
       object.material.needsUpdate = true; 
     }
     
+    var edge = object_edges[object.uuid];
+    if (showWireframe || object.visible){
+      edge.visible = true;
+    }else{
+      edge.visible = false;    
+    }
+    
     back_object = back_objects[object.uuid];
     if (back_object != null){
       back_object.material = material_back;
@@ -576,6 +605,7 @@ window.onload = function() {
   f1.add(settings, 'showWindows').name('Show Windows').onChange(update);
   f1.add(settings, 'showDoors').name('Show Doors').onChange(update);
   f1.add(settings, 'showShading').name('Show Shading').onChange(update);
+  f1.add(settings, 'showWireframe').name('Show Wireframe').onChange(update);
   f1.open();
 
   var f2 = gui.addFolder('Camera');
@@ -599,13 +629,13 @@ window.onload = function() {
   //f2.open();
   
   //if (os_data.metadata.hasData){
-    var f3 = gui.addFolder('Data Rendering');
-    f3.add(settings, 'orthographic').name('Orthographic');
-    f3.add(settings, 'xView').name('X View');
-    f3.add(settings, 'yView').name('Y View');
-    f3.add(settings, 'zView').name('Z View');
-    f3.add(settings, 'reset').name('Reset');
-    f3.open();
+  //  var f3 = gui.addFolder('Data Rendering');
+  //  f3.add(settings, 'orthographic').name('Orthographic');
+  //  f3.add(settings, 'xView').name('X View');
+  //  f3.add(settings, 'yView').name('Y View');
+  //  f3.add(settings, 'zView').name('Z View');
+  //  f3.add(settings, 'reset').name('Reset');
+  //  f3.open();
   //}
   
   update();
