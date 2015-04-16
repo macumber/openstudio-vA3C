@@ -31,7 +31,9 @@ class VA3C
   SceneObject = Struct.new(:uuid, :type, :matrix, :children)
   SceneChild = Struct.new(:uuid, :name, :type, :geometry, :material, :matrix, :userData)
   UserData = Struct.new(:handle, :name, :surfaceType, :constructionName, :spaceName, :thermalZoneName, :spaceTypeName, :buildingStoryName, 
-                        :outsideBoundaryCondition, :outsideBoundaryConditionObjectName, :sunExposure, :windExposure, #:vertices, 
+                        :outsideBoundaryCondition, :outsideBoundaryConditionObjectName, 
+                        :outsideBoundaryConditionObjectHandle, :coincidentWithOutsideObject,
+                        :sunExposure, :windExposure, #:vertices, 
                         :surfaceTypeMaterialName, :boundaryMaterialName, :constructionMaterialName,  :thermalZoneMaterialName, 
                         :spaceTypeMaterialName, :buildingStoryMaterialName) do
     def initialize(*)
@@ -130,35 +132,45 @@ class VA3C
     materials << make_material('Undefined', format_color(255, 255, 255), 1, THREE::DoubleSide) 
     
     materials << make_material('NormalMaterial', format_color(255, 255, 255), 1, THREE::DoubleSide) 
-    materials << make_material('NormalMaterial_Int', format_color(255, 0, 0), 1, THREE::FrontSide) 
+    materials << make_material('NormalMaterial_Ext', format_color(255, 255, 255), 1, THREE::FrontSide) 
+    materials << make_material('NormalMaterial_Int', format_color(255, 0, 0), 1, THREE::BackSide) 
     
     # materials from 'openstudio\openstudiocore\ruby\openstudio\sketchup_plugin\lib\interfaces\MaterialsInterface.rb'
     materials << make_material('Floor', format_color(128, 128, 128), 1, THREE::DoubleSide) 
-    materials << make_material('Floor_Int', format_color(191, 191, 191), 1, THREE::FrontSide) 
+    materials << make_material('Floor_Ext', format_color(128, 128, 128), 1, THREE::FrontSide) 
+    materials << make_material('Floor_Int', format_color(191, 191, 191), 1, THREE::BackSide) 
     
     materials << make_material('Wall', format_color(204, 178, 102), 1, THREE::DoubleSide) 
-    materials << make_material('Wall_Int', format_color(235, 226, 197), 1, THREE::FrontSide) 
+    materials << make_material('Wall_Ext', format_color(204, 178, 102), 1, THREE::FrontSide) 
+    materials << make_material('Wall_Int', format_color(235, 226, 197), 1, THREE::BackSide) 
     
     materials << make_material('RoofCeiling', format_color(153, 76, 76), 1, THREE::DoubleSide) 
-    materials << make_material('RoofCeiling_Int', format_color(202, 149, 149), 1, THREE::FrontSide) 
+    materials << make_material('RoofCeiling_Ext', format_color(153, 76, 76), 1, THREE::FrontSide) 
+    materials << make_material('RoofCeiling_Int', format_color(202, 149, 149), 1, THREE::BackSide) 
 
     materials << make_material('Window', format_color(102, 178, 204), 0.6, THREE::DoubleSide) 
-    materials << make_material('Window_Int', format_color(192, 226, 235), 0.6, THREE::FrontSide) 
+    materials << make_material('Window_Ext', format_color(102, 178, 204), 0.6, THREE::FrontSide) 
+    materials << make_material('Window_Int', format_color(192, 226, 235), 0.6, THREE::BackSide) 
     
     materials << make_material('Door', format_color(153, 133, 76), 1, THREE::DoubleSide) 
-    materials << make_material('Door_Int', format_color(202, 188, 149), 1, THREE::FrontSide) 
+    materials << make_material('Door_Ext', format_color(153, 133, 76), 1, THREE::FrontSide) 
+    materials << make_material('Door_Int', format_color(202, 188, 149), 1, THREE::BackSide) 
 
     materials << make_material('SiteShading', format_color(75, 124, 149), 1, THREE::DoubleSide) 
-    materials << make_material('SiteShading_Int', format_color(187, 209, 220), 1, THREE::FrontSide) 
+    materials << make_material('SiteShading_Ext', format_color(75, 124, 149), 1, THREE::FrontSide) 
+    materials << make_material('SiteShading_Int', format_color(187, 209, 220), 1, THREE::BackSide) 
 
     materials << make_material('BuildingShading', format_color(113, 76, 153), 1, THREE::DoubleSide) 
-    materials << make_material('BuildingShading_Int', format_color(216, 203, 229), 1, THREE::FrontSide) 
+    materials << make_material('BuildingShading_Ext', format_color(113, 76, 153), 1, THREE::FrontSide) 
+    materials << make_material('BuildingShading_Int', format_color(216, 203, 229), 1, THREE::BackSide) 
     
     materials << make_material('SpaceShading', format_color(76, 110, 178), 1, THREE::DoubleSide) 
-    materials << make_material('SpaceShading_Int', format_color(183, 197, 224), 1, THREE::FrontSide) 
+    materials << make_material('SpaceShading_Ext', format_color(76, 110, 178), 1, THREE::FrontSide)
+    materials << make_material('SpaceShading_Int', format_color(183, 197, 224), 1, THREE::BackSide) 
     
-    materials << make_material('InteriorPartitionSurface', format_color(158, 188, 143), 1, THREE::DoubleSide) 
-    materials << make_material('InteriorPartitionSurface_Int', format_color(213, 226, 207), 1, THREE::FrontSide) 
+    materials << make_material('InteriorPartitionSurface', format_color(158, 188, 143), 1, THREE::DoubleSide)
+    materials << make_material('InteriorPartitionSurface_Ext', format_color(158, 188, 143), 1, THREE::FrontSide)    
+    materials << make_material('InteriorPartitionSurface_Int', format_color(213, 226, 207), 1, THREE::BackSide) 
     
     # start textures for boundary conditions
     materials << make_material('Boundary_Surface', format_color(0, 153, 0), 1, THREE::DoubleSide)
@@ -304,7 +316,7 @@ class VA3C
       # 0 indicates triangle
       # 16 indicates triangle with normals
       face_indices << 0
-      vertices.each do |vertex|
+      vertices.reverse_each do |vertex|
         face_indices << get_vertex_index(vertex, all_vertices)  
       end
 
@@ -332,6 +344,7 @@ class VA3C
     surface_user_data = UserData.new
     surface_user_data.handle = format_uuid(surface.handle)
     surface_user_data.name = surface.name.to_s
+    surface_user_data.coincidentWithOutsideObject = false
     surface_user_data.surfaceType = surface.surfaceType
     surface_user_data.surfaceTypeMaterialName = surface.surfaceType
     
@@ -339,9 +352,14 @@ class VA3C
     adjacent_surface = surface.adjacentSurface
     if adjacent_surface.is_initialized
       surface_user_data.outsideBoundaryConditionObjectName = adjacent_surface.get.name.to_s
+      surface_user_data.outsideBoundaryConditionObjectHandle = format_uuid(adjacent_surface.get.handle)
+      
+      # todo: do this for real
+      surface_user_data.coincidentWithOutsideObject = true
     end
     surface_user_data.sunExposure = surface.sunExposure
     surface_user_data.windExposure = surface.windExposure
+    
     
     if surface.outsideBoundaryCondition == 'Outdoors'
       if surface.sunExposure == 'SunExposed' && surface.windExposure == 'WindExposed'
@@ -415,7 +433,7 @@ class VA3C
         # 0 indicates triangle
         # 16 indicates triangle with normals
         face_indices << 0
-        vertices.each do |vertex|
+        vertices.reverse_each do |vertex|
           face_indices << get_vertex_index(vertex, all_vertices)  
         end    
 
@@ -443,6 +461,8 @@ class VA3C
       sub_surface_user_data = UserData.new
       sub_surface_user_data.handle = format_uuid(sub_surface.handle)
       sub_surface_user_data.name = sub_surface.name.to_s
+      sub_surface_user_data.coincidentWithOutsideObject = false
+      
       sub_surface_user_data.surfaceType = sub_surface.subSurfaceType
       if /Window/.match(sub_surface.subSurfaceType) || /Glass/.match(sub_surface.subSurfaceType) 
         sub_surface_user_data.surfaceTypeMaterialName = 'Window'
@@ -454,7 +474,12 @@ class VA3C
       adjacent_sub_surface = sub_surface.adjacentSubSurface
       if adjacent_sub_surface.is_initialized
         sub_surface_user_data.outsideBoundaryConditionObjectName = adjacent_sub_surface.get.name.to_s
-        sub_surface_user_data.outsideBoundaryConditionObjectName = 'Boundary_Surface'
+        sub_surface_user_data.outsideBoundaryConditionObjectHandle = format_uuid(adjacent_sub_surface.get.handle)
+        
+        # todo: do this for real
+        sub_surface_user_data.coincidentWithOutsideObject = true
+      
+        sub_surface_user_data.boundaryMaterialName = 'Boundary_Surface'
       else
         if surface_user_data.boundaryMaterialName == 'Boundary_Surface'
           sub_surface_user_data.boundaryMaterialName = 'Undefined'
@@ -559,7 +584,7 @@ class VA3C
       # 0 indicates triangle
       # 16 indicates triangle with normals
       face_indices << 0
-      vertices.each do |vertex|
+      vertices.reverse_each do |vertex|
         face_indices << get_vertex_index(vertex, all_vertices)  
       end
 
@@ -587,11 +612,14 @@ class VA3C
     surface_user_data = UserData.new
     surface_user_data.handle = format_uuid(surface.handle)
     surface_user_data.name = surface.name.to_s
+    surface_user_data.coincidentWithOutsideObject = false
+    
     surface_user_data.surfaceType = shading_surface_type + 'Shading'
     surface_user_data.surfaceTypeMaterialName = shading_surface_type + 'Shading'
   
     surface_user_data.outsideBoundaryCondition = nil
     surface_user_data.outsideBoundaryConditionObjectName = nil
+    surface_user_data.outsideBoundaryConditionObjectHandle = nil
     surface_user_data.sunExposure = 'SunExposed'
     surface_user_data.windExposure = 'WindExposed'
     
@@ -676,9 +704,11 @@ class VA3C
 
         scene_child = SceneChild.new
         scene_child.uuid = format_uuid(OpenStudio::createUUID) 
-        scene_child.name = "#{surface.name.to_s} #{i}"
+        scene_child.name = user_data[:name]
         scene_child.type = "Mesh"
         scene_child.geometry = geometry[:uuid]
+        
+
         
         if i == 0
           # first geometry is base surface
@@ -720,7 +750,7 @@ class VA3C
 
         scene_child = SceneChild.new
         scene_child.uuid = format_uuid(OpenStudio::createUUID) 
-        scene_child.name = "#{surface.name.to_s} #{i}"
+        scene_child.name = user_data[:name]
         scene_child.type = 'Mesh'
         scene_child.geometry = geometry[:uuid]
         scene_child.material = material[:uuid]

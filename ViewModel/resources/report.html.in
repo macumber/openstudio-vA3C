@@ -12,7 +12,7 @@
 <body>
 <script>
 var os_data = <%=os_data %>;
-var info, renderer, scene, light, scene_objects, front_objects, back_objects;
+var info, renderer, scene, light, scene_objects, coincident_objects, back_objects;
 var perspectiveCamera, orthographicCamera, perspectiveControls, orthographicControls;
 var project, materials;
 
@@ -231,23 +231,40 @@ function init() {
   data = loader.parse(os_data);
   project.add(data);
   
+  // scene_objects is an array of THREE.Mesh where each mesh is a real OpenStudio object
   scene_objects = project.children[0].children;
+  
+  // temp is a map of OpenStudio handle to scene object
+  var temp = {};
+  for ( object of scene_objects ) {
+    temp[object.userData.handle] = object;
+  }
+  
+  // coincident_objects store references between adjacent objects that are truly coincident, meaning that their vertices are completely the same
+  coincident_objects = {}
+  for ( object of scene_objects ) {
+    if (object.userData.coincidentWithOutsideObject){
+      coincident_objects[object.uuid] = temp[object.userData.outsideBoundaryConditionObjectHandle];
+    }
+  }
+  
+  // back_objects are copies of scene_objects that exist only so we can color their back sides
+  // objects that have coincident objects do not get a back object
   back_objects = {};
-  front_objects = {};
   for ( object of scene_objects ) {
     edges = new THREE.EdgesHelper( object, 0x000000 );
     scene.add(edges);
     edge = scene.children[scene.children.length-1];
     
-    back_object = object.clone();
-    back_object.visible = false;
-    back_object.name = back_object.name + ' Back';
-    scene.add(back_object);
-    back_object = scene.children[scene.children.length-1];
-    back_object.geometry = object.geometry.clone();
-    
-    back_objects[object.uuid] = back_object;
-    front_objects[back_object.uuid] = object;
+    if (coincident_objects[object.uuid] == null){
+      back_object = object.clone();
+      back_object.visible = false;
+      back_object.name = back_object.name + ' Back';
+      scene.add(back_object);
+      back_object = scene.children[scene.children.length-1];
+      back_object.geometry = object.geometry.clone();
+      back_objects[object.uuid] = back_object;
+    }
   }
   
   // show look at point
@@ -312,9 +329,15 @@ function onDocumentMouseClick(event) {
         intersected.lastMaterial = null;
       }
       if (intersected){
+        coincident_intersected = coincident_objects[intersected.uuid];
+        if (coincident_intersected && coincident_intersected.lastMaterial) {
+          coincident_intersected.visible = true;
+          coincident_intersected.material = coincident_intersected.lastMaterial;
+          coincident_intersected.material.needsUpdate = true;
+          coincident_intersected.lastMaterial = null;
+        }      
         back_intersected = back_objects[intersected.uuid];
         if (back_intersected && back_intersected.lastMaterial) {
-          console.log('restoring');
           back_intersected.visible = true;
           back_intersected.material = back_intersected.lastMaterial;
           back_intersected.material.needsUpdate = true;
@@ -322,29 +345,29 @@ function onDocumentMouseClick(event) {
         }
       }
     
-      // figure out which object we intersected, might have hit a back object
+      // figure out which object we intersected, we did not test back objects
       intersected = intersects[0].object;
-      temp = front_objects[intersected.uuid];
-      if (temp){
-        intersected = temp;
-      }
+      coincident_intersected = coincident_objects[intersected.uuid];
       back_intersected = back_objects[intersected.uuid];
 
-      // save material
-      if (intersected && intersected.material) {
+      // save last material and set new one
+      if (intersected) {
         intersected.lastMaterial = intersected.material;
+        intersected.material = selected_material;
+        intersected.material.needsUpdate = true;      
       }
-      if (back_intersected && back_intersected.material) {
+      if (coincident_intersected) {        
+        coincident_intersected.lastMaterial = coincident_intersected.material;
+        coincident_intersected.material = selected_material_back;
+        coincident_intersected.material.needsUpdate = true;
+        coincident_intersected.visible = false; 
+      }   
+      if (back_intersected) {
         back_intersected.lastMaterial = back_intersected.material;
-        console.log('saving');
+        back_intersected.material = selected_material_back;
+        back_intersected.material.needsUpdate = true;
+        back_intersected.visible = false;
       }      
-
-      intersected.material = selected_material;
-      intersected.material.needsUpdate = true;
-      back_intersected.material = selected_material_back;
-      back_intersected.material.needsUpdate = true;
-      back_intersected.visible = false;
-      console.log('setting');
 
       headsUp.style.left = 10 + 0.5 * window.innerWidth + mouse.x * 0.5 * window.innerWidth + 'px';
       headsUp.style.top = -10 + 0.5 * window.innerHeight - mouse.y * 0.5 * window.innerHeight + 'px';
@@ -408,6 +431,13 @@ function onDocumentMouseClick(event) {
       intersected.lastMaterial = null;
     }
     if (intersected){
+      coincident_intersected = coincident_objects[intersected.uuid];
+      if (coincident_intersected && coincident_intersected.lastMaterial) {
+        coincident_intersected.visible = true;
+        coincident_intersected.material = coincident_intersected.lastMaterial;
+        coincident_intersected.material.needsUpdate = true;
+        coincident_intersected.lastMaterial = null;
+      }    
       back_intersected = back_objects[intersected.uuid];
       if (back_intersected && back_intersected.lastMaterial) {
         console.log('restoring 2');
@@ -479,11 +509,19 @@ var update = function (value) {
     var material_back = null;
     switch (renderBy) {
       case "Surface Type":
-        material = materials[object.userData.surfaceTypeMaterialName];
+        if (coincident_objects[object.uuid] == null){
+          material = materials[object.userData.surfaceTypeMaterialName];
+        }else{
+          material = materials[object.userData.surfaceTypeMaterialName + '_Int'];
+        }
         material_back = materials[object.userData.surfaceTypeMaterialName + '_Int'];
         break;
       case "Normal":
-        material = materials['NormalMaterial'];
+        if (coincident_objects[object.uuid] == null){
+          material = materials['NormalMaterial'];
+        }else{
+          material = materials['NormalMaterial_Int'];
+        }
         material_back = materials['NormalMaterial_Int'];
         break;
       case "Boundary":
@@ -511,12 +549,14 @@ var update = function (value) {
     }
     
     back_object = back_objects[object.uuid];
-    back_object.material = material_back;
-    if ( material_back != null){
-      back_object.visible = object.visible;
-      back_object.material.needsUpdate = true; 
-    }else{
-      back_object.visible = false;
+    if (back_object != null){
+      back_object.material = material_back;
+      if ( material_back != null){
+        back_object.visible = object.visible;
+        back_object.material.needsUpdate = true; 
+      }else{
+        back_object.visible = false;
+      }
     }
   }
 };
