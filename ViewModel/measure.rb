@@ -60,8 +60,8 @@ class ViewModel < OpenStudio::Ruleset::ReportingUserScript
     # write json file
     json_out_path = "./report.json"
     File.open(json_out_path, 'w') do |file|
-      file << JSON::generate(json, {:object_nl=>"\n", :array_nl=>"", :indent=>"  "})
-      #file << JSON::generate(json, {:object_nl=>"", :array_nl=>"", :indent=>""})
+      file << JSON::generate(json, {:object_nl=>"\n", :array_nl=>"", :indent=>"  ", :space=>"", :space_before=>""})
+      #file << JSON::generate(json, {:object_nl=>"", :array_nl=>"", :indent=>"", :space=>"", :space_before=>""})
       # make sure data is written to the disk one way or the other      
       begin
         file.fsync
@@ -83,7 +83,7 @@ class ViewModel < OpenStudio::Ruleset::ReportingUserScript
     end
     
     # configure template with variable values
-    os_data = JSON::generate(json, {:object_nl=>"", :array_nl=>"", :indent=>""})
+    os_data = JSON::generate(json, {:object_nl=>"", :array_nl=>"", :indent=>"", :space=>"", :space_before=>""})
     renderer = ERB.new(html_in)
     html_out = renderer.result(binding)
 

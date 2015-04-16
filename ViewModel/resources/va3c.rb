@@ -10,6 +10,12 @@ if /^1\.8/.match(RUBY_VERSION)
   end
 end
 
+module THREE
+  FrontSide = 0
+  BackSide = 1
+  DoubleSide = 2
+end
+
 # Va3c class converts an OpenStudio model to vA3C JSON format for rendering in Three.js
 # using export at http://va3c.github.io/projects/#./osm-data-viewer/latest/index.html# as a guide
 # many thanks to Theo Armour and the vA3C team for figuring out many of the details here
@@ -25,7 +31,7 @@ class VA3C
   SceneObject = Struct.new(:uuid, :type, :matrix, :children)
   SceneChild = Struct.new(:uuid, :name, :type, :geometry, :material, :matrix, :userData)
   UserData = Struct.new(:handle, :name, :surfaceType, :constructionName, :spaceName, :thermalZoneName, :spaceTypeName, :buildingStoryName, 
-                        :outsideBoundaryCondition, :outsideBoundaryConditionObjectName, :sunExposure, :windExposure, :vertices, 
+                        :outsideBoundaryCondition, :outsideBoundaryConditionObjectName, :sunExposure, :windExposure, #:vertices, 
                         :surfaceTypeMaterialName, :boundaryMaterialName, :constructionMaterialName,  :thermalZoneMaterialName, 
                         :spaceTypeMaterialName, :buildingStoryMaterialName) do
     def initialize(*)
@@ -95,7 +101,7 @@ class VA3C
   end
   
   # create a material
-  def self.make_material(name, color, opacity)
+  def self.make_material(name, color, opacity, side)
 
     transparent = false
     if opacity < 1
@@ -113,7 +119,7 @@ class VA3C
                 :opacity => opacity,
                 :transparent => transparent,
                 :wireframe => false,
-                :side => 2}
+                :side => side}
     return material
   end
 
@@ -121,55 +127,58 @@ class VA3C
   def self.build_materials(model)
     materials = []
     
-    materials << make_material('Undefined', format_color(255, 255, 255), 1) 
+    materials << make_material('Undefined', format_color(255, 255, 255), 1, THREE::DoubleSide) 
+    
+    materials << make_material('NormalMaterial', format_color(255, 255, 255), 1, THREE::DoubleSide) 
+    materials << make_material('NormalMaterial_Int', format_color(255, 0, 0), 1, THREE::FrontSide) 
     
     # materials from 'openstudio\openstudiocore\ruby\openstudio\sketchup_plugin\lib\interfaces\MaterialsInterface.rb'
-    materials << make_material('Floor', format_color(128, 128, 128), 1) 
-    materials << make_material('Floor_Int', format_color(191, 191, 191), 1) 
+    materials << make_material('Floor', format_color(128, 128, 128), 1, THREE::DoubleSide) 
+    materials << make_material('Floor_Int', format_color(191, 191, 191), 1, THREE::FrontSide) 
     
-    materials << make_material('Wall', format_color(204, 178, 102), 1) 
-    materials << make_material('Wall_Int', format_color(235, 226, 197), 1) 
+    materials << make_material('Wall', format_color(204, 178, 102), 1, THREE::DoubleSide) 
+    materials << make_material('Wall_Int', format_color(235, 226, 197), 1, THREE::FrontSide) 
     
-    materials << make_material('RoofCeiling', format_color(153, 76, 76), 1) 
-    materials << make_material('RoofCeiling_Int', format_color(202, 149, 149), 1) 
+    materials << make_material('RoofCeiling', format_color(153, 76, 76), 1, THREE::DoubleSide) 
+    materials << make_material('RoofCeiling_Int', format_color(202, 149, 149), 1, THREE::FrontSide) 
 
-    materials << make_material('Window', format_color(102, 178, 204), 0.6) 
-    materials << make_material('Window_Int', format_color(192, 226, 235), 0.6) 
+    materials << make_material('Window', format_color(102, 178, 204), 0.6, THREE::DoubleSide) 
+    materials << make_material('Window_Int', format_color(192, 226, 235), 0.6, THREE::FrontSide) 
     
-    materials << make_material('Door', format_color(153, 133, 76), 1) 
-    materials << make_material('Door_Int', format_color(202, 188, 149), 1) 
+    materials << make_material('Door', format_color(153, 133, 76), 1, THREE::DoubleSide) 
+    materials << make_material('Door_Int', format_color(202, 188, 149), 1, THREE::FrontSide) 
 
-    materials << make_material('SiteShading', format_color(75, 124, 149), 1) 
-    materials << make_material('SiteShading_Int', format_color(187, 209, 220), 1) 
+    materials << make_material('SiteShading', format_color(75, 124, 149), 1, THREE::DoubleSide) 
+    materials << make_material('SiteShading_Int', format_color(187, 209, 220), 1, THREE::FrontSide) 
 
-    materials << make_material('BuildingShading', format_color(113, 76, 153), 1) 
-    materials << make_material('BuildingShading_Int', format_color(216, 203, 229), 1) 
+    materials << make_material('BuildingShading', format_color(113, 76, 153), 1, THREE::DoubleSide) 
+    materials << make_material('BuildingShading_Int', format_color(216, 203, 229), 1, THREE::FrontSide) 
     
-    materials << make_material('SpaceShading', format_color(76, 110, 178), 1) 
-    materials << make_material('SpaceShading_Int', format_color(183, 197, 224), 1) 
+    materials << make_material('SpaceShading', format_color(76, 110, 178), 1, THREE::DoubleSide) 
+    materials << make_material('SpaceShading_Int', format_color(183, 197, 224), 1, THREE::FrontSide) 
     
-    materials << make_material('InteriorPartitionSurface', format_color(158, 188, 143), 1) 
-    materials << make_material('InteriorPartitionSurface_Int', format_color(213, 226, 207), 1) 
+    materials << make_material('InteriorPartitionSurface', format_color(158, 188, 143), 1, THREE::DoubleSide) 
+    materials << make_material('InteriorPartitionSurface_Int', format_color(213, 226, 207), 1, THREE::FrontSide) 
     
     # start textures for boundary conditions
-    materials << make_material('Boundary_Surface', format_color(0, 153, 0), 1)
-    materials << make_material('Boundary_Adiabatic', format_color(255, 101, 178), 1)
-    materials << make_material('Boundary_Space', format_color(255, 0, 0), 1)
-    materials << make_material('Boundary_Outdoors', format_color(163, 204, 204), 1)
-    materials << make_material('Boundary_Outdoors_Sun', format_color(40, 204, 204), 1)
-    materials << make_material('Boundary_Outdoors_Wind', format_color(9, 159, 162), 1)
-    materials << make_material('Boundary_Outdoors_SunWind', format_color(68, 119, 161), 1)
-    materials << make_material('Boundary_Ground', format_color(204, 183, 122), 1)
-    materials << make_material('Boundary_Groundfcfactormethod', format_color(153, 122, 30), 1)
-    materials << make_material('Boundary_Groundslabpreprocessoraverage', format_color(255, 191, 0), 1)
-    materials << make_material('Boundary_Groundslabpreprocessorcore', format_color(255, 182, 50), 1)
-    materials << make_material('Boundary_Groundslabpreprocessorperimeter', format_color(255, 178, 101), 1)
-    materials << make_material('Boundary_Groundbasementpreprocessoraveragewall', format_color(204, 51, 0), 1)
-    materials << make_material('Boundary_Groundbasementpreprocessoraveragefloor', format_color(204, 81, 40), 1)
-    materials << make_material('Boundary_Groundbasementpreprocessorupperwall', format_color(204, 112, 81), 1)
-    materials << make_material('Boundary_Groundbasementpreprocessorlowerwall', format_color(204, 173, 163), 1)
-    materials << make_material('Boundary_Othersidecoefficients', format_color(63, 63, 63), 1)
-    materials << make_material('Boundary_Othersideconditionsmodel', format_color(153, 0, 76), 1) 
+    materials << make_material('Boundary_Surface', format_color(0, 153, 0), 1, THREE::DoubleSide)
+    materials << make_material('Boundary_Adiabatic', format_color(255, 101, 178), 1, THREE::DoubleSide)
+    materials << make_material('Boundary_Space', format_color(255, 0, 0), 1, THREE::DoubleSide)
+    materials << make_material('Boundary_Outdoors', format_color(163, 204, 204), 1, THREE::DoubleSide)
+    materials << make_material('Boundary_Outdoors_Sun', format_color(40, 204, 204), 1, THREE::DoubleSide)
+    materials << make_material('Boundary_Outdoors_Wind', format_color(9, 159, 162), 1, THREE::DoubleSide)
+    materials << make_material('Boundary_Outdoors_SunWind', format_color(68, 119, 161), 1, THREE::DoubleSide)
+    materials << make_material('Boundary_Ground', format_color(204, 183, 122), 1, THREE::DoubleSide)
+    materials << make_material('Boundary_Groundfcfactormethod', format_color(153, 122, 30), 1, THREE::DoubleSide)
+    materials << make_material('Boundary_Groundslabpreprocessoraverage', format_color(255, 191, 0), 1, THREE::DoubleSide)
+    materials << make_material('Boundary_Groundslabpreprocessorcore', format_color(255, 182, 50), 1, THREE::DoubleSide)
+    materials << make_material('Boundary_Groundslabpreprocessorperimeter', format_color(255, 178, 101), 1, THREE::DoubleSide)
+    materials << make_material('Boundary_Groundbasementpreprocessoraveragewall', format_color(204, 51, 0), 1, THREE::DoubleSide)
+    materials << make_material('Boundary_Groundbasementpreprocessoraveragefloor', format_color(204, 81, 40), 1, THREE::DoubleSide)
+    materials << make_material('Boundary_Groundbasementpreprocessorupperwall', format_color(204, 112, 81), 1, THREE::DoubleSide)
+    materials << make_material('Boundary_Groundbasementpreprocessorlowerwall', format_color(204, 173, 163), 1, THREE::DoubleSide)
+    materials << make_material('Boundary_Othersidecoefficients', format_color(63, 63, 63), 1, THREE::DoubleSide)
+    materials << make_material('Boundary_Othersideconditionsmodel', format_color(153, 0, 76), 1, THREE::DoubleSide) 
     
     # make construction materials
     model.getConstructionBases.each do |construction|
@@ -181,7 +190,7 @@ class VA3C
         color = color.get
       end
       name = "Construction_#{construction.name.to_s}"
-      materials << make_material(name, format_color(color.renderingRedValue, color.renderingGreenValue, color.renderingBlueValue), color.renderingAlphaValue / 255.to_f)
+      materials << make_material(name, format_color(color.renderingRedValue, color.renderingGreenValue, color.renderingBlueValue), color.renderingAlphaValue / 255.to_f, THREE::DoubleSide)
     end
     
     # make thermal zone materials
@@ -194,7 +203,7 @@ class VA3C
         color = color.get        
       end
       name = "ThermalZone_#{zone.name.to_s}"
-      materials << make_material(name, format_color(color.renderingRedValue, color.renderingGreenValue, color.renderingBlueValue), color.renderingAlphaValue / 255.to_f)
+      materials << make_material(name, format_color(color.renderingRedValue, color.renderingGreenValue, color.renderingBlueValue), color.renderingAlphaValue / 255.to_f, THREE::DoubleSide)
     end
     
     # make space type materials
@@ -207,7 +216,7 @@ class VA3C
         color = color.get        
       end
       name = "SpaceType_#{spaceType.name.to_s}"
-      materials << make_material(name, format_color(color.renderingRedValue, color.renderingGreenValue, color.renderingBlueValue), color.renderingAlphaValue / 255.to_f)
+      materials << make_material(name, format_color(color.renderingRedValue, color.renderingGreenValue, color.renderingBlueValue), color.renderingAlphaValue / 255.to_f, THREE::DoubleSide)
     end
     
     # make building story materials
@@ -220,7 +229,7 @@ class VA3C
         color = color.get        
       end
       name = "BuildingStory_#{buildingStory.name.to_s}"
-      materials << make_material(name, format_color(color.renderingRedValue, color.renderingGreenValue, color.renderingBlueValue), color.renderingAlphaValue / 255.to_f)
+      materials << make_material(name, format_color(color.renderingRedValue, color.renderingGreenValue, color.renderingBlueValue), color.renderingAlphaValue / 255.to_f, THREE::DoubleSide)
     end
     
     return materials
@@ -245,9 +254,9 @@ class VA3C
       #result << vertex.y
       #result << vertex.z
       
-      result << vertex.x
-      result << vertex.z
-      result << -vertex.y
+      result << vertex.x.round(3)
+      result << vertex.z.round(3)
+      result << -vertex.y.round(3)
     end
     return result
   end
@@ -378,15 +387,15 @@ class VA3C
       end
     end
     
-    vertices = []
-    surface.vertices.each do |v| 
-      vertex = Vertex.new
-      vertex.x = v.x
-      vertex.y = v.y
-      vertex.z = v.z
-      vertices << vertex.to_h
-    end
-    surface_user_data.vertices = vertices
+    #vertices = []
+    #surface.vertices.each do |v| 
+    #  vertex = Vertex.new
+    #  vertex.x = v.x
+    #  vertex.y = v.y
+    #  vertex.z = v.z
+    #  vertices << vertex.to_h
+    #end
+    #surface_user_data.vertices = vertices
     user_datas << surface_user_data.to_h
     
     # now add geometry for each sub surface
@@ -469,15 +478,15 @@ class VA3C
       sub_surface_user_data.buildingStoryName = surface_user_data.buildingStoryName
       sub_surface_user_data.buildingStoryMaterialName = surface_user_data.buildingStoryMaterialName
 
-      vertices = []
-      surface.vertices.each do |v| 
-        vertex = Vertex.new
-        vertex.x = v.x
-        vertex.y = v.y
-        vertex.z = v.z
-        vertices << vertex.to_h
-      end
-      sub_surface_user_data.vertices = vertices
+      #vertices = []
+      #surface.vertices.each do |v| 
+      #  vertex = Vertex.new
+      #  vertex.x = v.x
+      #  vertex.y = v.y
+      #  vertex.z = v.z
+      #  vertices << vertex.to_h
+      #end
+      #sub_surface_user_data.vertices = vertices
       user_datas << sub_surface_user_data.to_h     
     end
 
@@ -606,15 +615,15 @@ class VA3C
       surface_user_data.buildingStoryMaterialName = 'BuildingStory_' + building_story_name
     end
 
-    vertices = []
-    surface.vertices.each do |v| 
-      vertex = Vertex.new
-      vertex.x = v.x
-      vertex.y = v.y
-      vertex.z = v.z
-      vertices << vertex.to_h
-    end
-    surface_user_data.vertices = vertices
+    #vertices = []
+    #surface.vertices.each do |v| 
+    #  vertex = Vertex.new
+    #  vertex.x = v.x
+    #  vertex.y = v.y
+    #  vertex.z = v.z
+    #  vertices << vertex.to_h
+    #end
+    #surface_user_data.vertices = vertices
     user_datas << surface_user_data.to_h
 
     return [geometries, user_datas]

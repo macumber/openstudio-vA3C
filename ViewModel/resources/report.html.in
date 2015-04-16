@@ -12,13 +12,13 @@
 <body>
 <script>
 var os_data = <%=os_data %>;
-var info, renderer, scene, light, back_objects, data_clone;
+var info, renderer, scene, light, scene_objects, front_objects, back_objects;
 var perspectiveCamera, orthographicCamera, perspectiveControls, orthographicControls;
 var project, materials;
 
 var raycaster;
 var mouse;
-var intersected, selected_material;
+var intersected, selected_material, selected_material_back;
 
 var settings = {
   renderBy: 'Surface Type',
@@ -49,6 +49,7 @@ function parseMaterials(json) {
     var data = json[ i ];
     var material = loader.parse( data );
     material.uuid = data.uuid;
+    material.name = data.name;
     materials[ data.name ] = material;
   }
   return materials;
@@ -231,9 +232,22 @@ function init() {
   project.add(data);
   
   scene_objects = project.children[0].children;
+  back_objects = {};
+  front_objects = {};
   for ( object of scene_objects ) {
     edges = new THREE.EdgesHelper( object, 0x000000 );
-    scene.add( edges );
+    scene.add(edges);
+    edge = scene.children[scene.children.length-1];
+    
+    back_object = object.clone();
+    back_object.visible = false;
+    back_object.name = back_object.name + ' Back';
+    scene.add(back_object);
+    back_object = scene.children[scene.children.length-1];
+    back_object.geometry = object.geometry.clone();
+    
+    back_objects[object.uuid] = back_object;
+    front_objects[back_object.uuid] = object;
   }
   
   // show look at point
@@ -247,6 +261,7 @@ function init() {
   mouse = new THREE.Vector2();
 
   selected_material = new THREE.MeshPhongMaterial({
+    name: 'Selected',
     color: 0xffff00,
     ambient: 0xffff00,
     specular: 0xffff00,
@@ -255,34 +270,19 @@ function init() {
     side: THREE.DoubleSide
   });
   
-  normal_material_front = new THREE.MeshPhongMaterial({
-    color: 0xff0000,
-    ambient: 0xff0000,
-    specular: 0xff0000,
-    emissive: 0xff0000,
+  selected_material_back = new THREE.MeshPhongMaterial({
+    name: 'Selected Back',
+    color: 0xffff00,
+    ambient: 0xffff00,
+    specular: 0xffff00,
+    emissive: 0xffff00,
     shininess: 50,
+    opacity: 0,
+    transparent: true,
     side: THREE.FrontSide
   });
   
-  normal_material_back = new THREE.MeshPhongMaterial({
-    color: 0xffffff,
-    ambient: 0xffffff,
-    specular: 0xffffff,
-    emissive: 0xffffff,
-    shininess: 50,
-    side: THREE.BackSide
-  });
-  
   materials = parseMaterials(os_data.materials);
-  
-  back_objects = [];
-  data_clone = data.clone();
-  for ( object of data_clone.children ) {
-    object.material = normal_material_back;
-    object.visible = false;
-    scene.add(object);
-    back_objects.push(scene.children[scene.children.length-1]);
-  }
 
   document.addEventListener('click', onDocumentMouseClick, false);
 }
@@ -298,25 +298,53 @@ function onDocumentMouseClick(event) {
     raycaster.setFromCamera(mouse, perspectiveCamera);
   }
   
-  // raycaster intersects invisible obejcts so filter first
-  var pickable = project.children[0].children.filter(function(x){return x.visible});
+  // raycaster intersects invisible objects so filter first
+  var pickable = scene_objects.filter(function(x){return x.visible});
   intersects = raycaster.intersectObjects(pickable);
   if (intersects.length) {
     // new intersected object
     if (intersected != intersects[0].object) {
+    
       // restore material on deselected
       if (intersected && intersected.lastMaterial) {
         intersected.material = intersected.lastMaterial;
+        intersected.material.needsUpdate = true;
+        intersected.lastMaterial = null;
       }
-
+      if (intersected){
+        back_intersected = back_objects[intersected.uuid];
+        if (back_intersected && back_intersected.lastMaterial) {
+          console.log('restoring');
+          back_intersected.visible = true;
+          back_intersected.material = back_intersected.lastMaterial;
+          back_intersected.material.needsUpdate = true;
+          back_intersected.lastMaterial = null;
+        }
+      }
+    
+      // figure out which object we intersected, might have hit a back object
       intersected = intersects[0].object;
+      temp = front_objects[intersected.uuid];
+      if (temp){
+        intersected = temp;
+      }
+      back_intersected = back_objects[intersected.uuid];
 
       // save material
       if (intersected && intersected.material) {
         intersected.lastMaterial = intersected.material;
       }
+      if (back_intersected && back_intersected.material) {
+        back_intersected.lastMaterial = back_intersected.material;
+        console.log('saving');
+      }      
 
       intersected.material = selected_material;
+      intersected.material.needsUpdate = true;
+      back_intersected.material = selected_material_back;
+      back_intersected.material.needsUpdate = true;
+      back_intersected.visible = false;
+      console.log('setting');
 
       headsUp.style.left = 10 + 0.5 * window.innerWidth + mouse.x * 0.5 * window.innerWidth + 'px';
       headsUp.style.top = -10 + 0.5 * window.innerHeight - mouse.y * 0.5 * window.innerHeight + 'px';
@@ -330,6 +358,12 @@ function onDocumentMouseClick(event) {
                 'Space Name: ' + intersected.userData.spaceName + '<br>' +
                 '';
           break;
+        case "Normal":
+          txt = 'Name: ' + intersected.userData.name + '<br>' +
+                'Surface Type: ' + intersected.userData.surfaceType + '<br>' +
+                'Space Name: ' + intersected.userData.spaceName + '<br>' +
+                '';
+          break;          
         case "Boundary":
           txt = 'Name: ' + intersected.userData.name + '<br>' +
                 'Outside Boundary Condition: ' + intersected.userData.outsideBoundaryCondition + '<br>' +
@@ -370,6 +404,18 @@ function onDocumentMouseClick(event) {
     // restore material on deselected
     if (intersected && intersected.lastMaterial) {
       intersected.material = intersected.lastMaterial;
+      intersected.material.needsUpdate = true;
+      intersected.lastMaterial = null;
+    }
+    if (intersected){
+      back_intersected = back_objects[intersected.uuid];
+      if (back_intersected && back_intersected.lastMaterial) {
+        console.log('restoring 2');
+        back_intersected.visible = true;
+        back_intersected.material = back_intersected.lastMaterial;
+        back_intersected.material.needsUpdate = true;
+        back_intersected.lastMaterial = null;
+      }
     }
 
     intersected = null;
@@ -402,18 +448,7 @@ var update = function (value) {
   showWindows = settings.showWindows;
   showDoors = settings.showDoors;
   showShading = settings.showShading;
-  
-  if (renderBy == "Normal"){
-    for ( object of back_objects ) {
-      object.visible = true;
-    }
-  }else{
-    for ( object of back_objects ) {
-      object.visible = false;
-    }
-  }
 
-  scene_objects = project.children[0].children;
   for ( object of scene_objects ) {
   
     surfaceType = object.userData.surfaceType;
@@ -441,12 +476,15 @@ var update = function (value) {
     }
     
     var material = null;
+    var material_back = null;
     switch (renderBy) {
       case "Surface Type":
         material = materials[object.userData.surfaceTypeMaterialName];
+        material_back = materials[object.userData.surfaceTypeMaterialName + '_Int'];
         break;
       case "Normal":
-        material = normal_material_front;
+        material = materials['NormalMaterial'];
+        material_back = materials['NormalMaterial_Int'];
         break;
       case "Boundary":
         material = materials[object.userData.boundaryMaterialName];
@@ -470,6 +508,15 @@ var update = function (value) {
     object.material = material;
     if ( material != null){
       object.material.needsUpdate = true; 
+    }
+    
+    back_object = back_objects[object.uuid];
+    back_object.material = material_back;
+    if ( material_back != null){
+      back_object.visible = object.visible;
+      back_object.material.needsUpdate = true; 
+    }else{
+      back_object.visible = false;
     }
   }
 };
