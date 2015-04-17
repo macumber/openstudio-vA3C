@@ -574,7 +574,7 @@ var update = function (value) {
     }
     
     back_object = back_objects[object.uuid];
-    if (back_object != null){
+    if (back_object){
       back_object.material = material_back;
       if ( material_back != null){
         back_object.visible = object.visible;
@@ -596,7 +596,7 @@ var update = function (value) {
             // coincident object is visible, hide back object
             back_object.visible = false;
           }else{
-            // coincident object is now visible, show back object
+            // coincident object is not visible, show back object
             back_object.visible = true;
             
             if (object.material_double_sided){
