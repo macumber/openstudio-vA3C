@@ -6,7 +6,7 @@ A huge thanks goes out to [Theo Armour](https://github.com/theo-armour) and the 
 
 Todo:
 - [x] Basic 3D rendering
-- [ ] Support multiple render modes (boundary condition, construction, thermal zone, outward normal)
-- [ ] Ability to render all stories or subset of stories
+- [x] Support multiple render modes (boundary condition, construction, thermal zone, outward normal)
+- [x] Ability to render all stories or subset of stories
 - [ ] Section cuts
 - [ ] Render by data
