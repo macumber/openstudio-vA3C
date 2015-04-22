@@ -513,6 +513,7 @@ var update = function (value) {
   
   var i = null;
   var time = null;
+  var units = '';
   if (isData && variable){
     i = Math.floor(variable.intervalsPerDay*Math.floor(settings.daySlider) + variable.intervalsPerHour*Math.floor(settings.hourSlider)) - 1;
     time = os_data.times[variable.timeIndex][i];
@@ -522,6 +523,10 @@ var update = function (value) {
     
     settings.dateTime = ('0' + (d.getUTCMonth()+1)).slice(-2) + "/" + ('0'+d.getUTCDate()).slice(-2) + " - " + ('0'+d.getUTCHours()).slice(-2) + ":" + ('0'+d.getUTCMinutes()).slice(-2); 
     dateTimeControl.updateDisplay();
+    
+    if (variable.units.length > 0){
+      units = ' (' + variable.units + ')'
+    }
   }
 
   for ( object of scene_objects ) {
@@ -605,7 +610,11 @@ var update = function (value) {
           }
         }
         
-        object.userData.variableValue = value;
+        if (value){
+          object.userData.variableValue = value + units;
+        }else{
+          object.userData.variableValue = ''
+        }
         
         material = new THREE.MeshBasicMaterial({side: THREE.DoubleSide});
         material.color.setHSL(hue, saturation, lightness);

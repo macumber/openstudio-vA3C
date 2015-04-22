@@ -152,6 +152,7 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
     intervalsPerHour = nil
     intervalsPerDay = nil
     numDays = nil
+    units = nil
     values = []
     data_range = [Float::MAX, Float::MIN] # data max, data min
     sqlFile.availableKeyValues(env_period, reporting_frequency, variable_name).each do |key|
@@ -167,6 +168,8 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
           intervalsPerDay = 1.0 / ts.intervalLength.get.totalDays
           numDays = times.size * ts.intervalLength.get.totalDays
         end
+        
+        units = ts.units 
       end
 
       this_values = vector_to_array(ts.values)
@@ -198,11 +201,11 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
     json = VA3C.convert_model(model)
     
     json['metadata'][:variables] = [{:name=>variable_name, :intervalsPerHour=>intervalsPerHour, :intervalsPerDay=>intervalsPerDay, 
-                                     :hoursPerInterval=>hoursPerInterval, :numDays=>numDays,
+                                     :hoursPerInterval=>hoursPerInterval, :numDays=>numDays, :units=>units,
                                      :valueMin=>data_range[0], :valueMax=>data_range[1]}]
     json[:times] = [times]
     json[:variables] = [{:name=>variable_name, :intervalsPerHour=>intervalsPerHour, :intervalsPerDay=>intervalsPerDay, 
-                         :hoursPerInterval=>hoursPerInterval, :numDays=>numDays, 
+                         :hoursPerInterval=>hoursPerInterval, :numDays=>numDays, :units=>units, 
                          :valueMin=>data_range[0], :valueMax=>data_range[1], :timeIndex=>0, :values=>values}]
     
     json['object'][:children].each do |child|
