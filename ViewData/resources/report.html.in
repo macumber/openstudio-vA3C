@@ -492,12 +492,14 @@ var update = function (value) {
 
   renderBy = settings.renderBy;
   isData = (renderBy == 'Data');
-  if (isData){
-    dataFolder.open();
-  }else{
-    dataFolder.close();
+  if (dataFolder){
+    if (isData){
+      dataFolder.open();
+    }else{
+      dataFolder.close();
+    }
   }
-  
+
   showStory = settings.showStory;
   allStories = (showStory == 'All Stories');
   
