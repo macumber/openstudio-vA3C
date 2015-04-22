@@ -1,6 +1,7 @@
 require 'rubygems'
 require 'json'
 require 'erb'
+require 'date'
 
 require_relative 'resources/va3c'
 
@@ -62,13 +63,29 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
   
   def datetimes_to_array(dateTimes)
     result = []
-    dateTimes.each {|d| result << d.to_s}
+    
+    dateTimes.each do |d| 
+      date = d.date
+      time = d.time
+      result << DateTime.new(date.year, date.monthOfYear.value, date.dayOfMonth, time.hours, time.minutes, time.seconds).strftime('%s').to_i
+
+    end
     return result
   end
   
   def vector_to_array(vector)
     result = []
-    (0...vector.size).each {|i| result << vector[i]}
+    (0...vector.size).each do |i| 
+      result << vector[i]
+    end
+    return result
+  end
+  
+  def format_array(vector)
+    result = []
+    vector.each do |x| 
+      result << ("%.6g" % x).to_f
+    end
     return result
   end
   
@@ -127,10 +144,15 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
           thermal_zone_name = thermal_zone.get.name.to_s.upcase
         end
       end
-      surface_data << {'surface_name'=>surface_name, 'thermal_zone_name'=>thermal_zone_name, 'values'=>nil}
+      surface_data << {:surface_name => surface_name, :thermal_zone_name => thermal_zone_name, :valueIndex => nil}
     end
    
     times = nil
+    hoursPerInterval = nil
+    intervalsPerHour = nil
+    intervalsPerDay = nil
+    numDays = nil
+    values = []
     data_range = [Float::MAX, Float::MIN] # data max, data min
     sqlFile.availableKeyValues(env_period, reporting_frequency, variable_name).each do |key|
       runner.registerInfo("Available key '#{key}' for variable name '#{variable_name}'")
@@ -139,24 +161,34 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
       
       if times.nil?
         times = datetimes_to_array(ts.dateTimes)
+        if !ts.intervalLength.empty?
+          hoursPerInterval = ts.intervalLength.get.totalHours
+          intervalsPerHour = 1.0 / hoursPerInterval.to_f
+          intervalsPerDay = 1.0 / ts.intervalLength.get.totalDays
+          numDays = times.size * ts.intervalLength.get.totalDays
+        end
       end
-      
-      values = vector_to_array(ts.values)
-      min = values.min
-      max = values.max
+
+      this_values = vector_to_array(ts.values)
+
+      min = this_values.min
+      max = this_values.max
       if (min < data_range[0])
         data_range[0] = min
       end
       if (max > data_range[1])
         data_range[1] = max
       end
+      
+      valueIndex = values.length
+      values << format_array(this_values)
 
-      if i = surface_data.index{|s| s['surface_name'] == key}
-        surface_data[i]['values'] = values
+      if i = surface_data.index{|s| s[:surface_name] == key}
+        surface_data[i][:valueIndex] = valueIndex
       else  
         surface_data.each do |s|
-          if s['thermal_zone_name'] == key
-            s['values'] = values
+          if s[:thermal_zone_name] == key
+            s[:valueIndex] = valueIndex
           end
         end
       end
@@ -164,19 +196,26 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
     
     # convert the model to vA3C JSON format
     json = VA3C.convert_model(model)
-    json['times'] = times
-    json['data_range'] = data_range
+    
+    json['metadata'][:variables] = [{:name=>variable_name, :intervalsPerHour=>intervalsPerHour, :intervalsPerDay=>intervalsPerDay, 
+                                     :hoursPerInterval=>hoursPerInterval, :numDays=>numDays,
+                                     :valueMin=>data_range[0], :valueMax=>data_range[1]}]
+    json[:times] = [times]
+    json[:variables] = [{:name=>variable_name, :intervalsPerHour=>intervalsPerHour, :intervalsPerDay=>intervalsPerDay, 
+                         :hoursPerInterval=>hoursPerInterval, :numDays=>numDays, 
+                         :valueMin=>data_range[0], :valueMax=>data_range[1], :timeIndex=>0, :values=>values}]
     
     json['object'][:children].each do |child|
       name = child[:userData][:name].upcase
       
-      surface = surface_data.find{|x| x['surface_name'] == name}
+      surface = surface_data.find{|x| x[:surface_name] == name}
       
-      values = nil
+      valueIndex = nil
       if surface
-        values = surface['values']
+        valueIndex = surface[:valueIndex]
       end
-      child[:userData][:values] = values
+      
+      child[:userData][:variables] = [{:name => variable_name, :valueIndex => valueIndex}]
       
     end
 

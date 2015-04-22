@@ -11,10 +11,12 @@
 </head>
 <body>
 <script>
+
 var os_data = <%=os_data %>;
 var info, renderer, scene, light, scene_objects, scene_edges, object_edges, coincident_objects, back_objects;
 var perspectiveCamera, orthographicCamera, perspectiveControls, orthographicControls;
-var project, materials;
+var project, materials, variable;
+var dataFolder, dateTimeControl;
 
 var raycaster;
 var mouse;
@@ -37,7 +39,11 @@ var settings = {
   orthographic: false,
   xSection: 0,
   ySection: 0,
-  zSection: 0
+  zSection: 0,
+  variableName: '',
+  daySlider: 0,
+  hourSlider: 1,
+  dateTime: ''
 };
 
 init();
@@ -451,6 +457,9 @@ function onDocumentMouseClick(event) {
               '';
         break;
       case "Data":
+        txt = 'Name: ' + intersected.userData.name + '<br>' +
+              'Variable Value: ' + intersected.userData.variableValue + '<br>' +
+              '';
         break;        
     }
 
@@ -482,6 +491,13 @@ var update = function (value) {
   selectObject(null);
 
   renderBy = settings.renderBy;
+  isData = (renderBy == 'Data');
+  if (isData){
+    dataFolder.open();
+  }else{
+    dataFolder.close();
+  }
+  
   showStory = settings.showStory;
   allStories = (showStory == 'All Stories');
   
@@ -492,6 +508,19 @@ var update = function (value) {
   showDoors = settings.showDoors;
   showShading = settings.showShading;
   showWireframe = settings.showWireframe;
+  
+  var i = null;
+  var time = null;
+  if (isData && variable){
+    i = Math.floor(variable.intervalsPerDay*Math.floor(settings.daySlider) + variable.intervalsPerHour*Math.floor(settings.hourSlider)) - 1;
+    time = os_data.times[variable.timeIndex][i];
+    
+    var d = new Date(0); // The 0 there is the key, which sets the date to the epoch  
+    d.setUTCSeconds(time);
+    
+    settings.dateTime = ('0' + (d.getUTCMonth()+1)).slice(-2) + "/" + ('0'+d.getUTCDate()).slice(-2) + " - " + ('0'+d.getUTCHours()).slice(-2) + ":" + ('0'+d.getUTCMinutes()).slice(-2); 
+    dateTimeControl.updateDisplay();
+  }
 
   for ( object of scene_objects ) {
   
@@ -557,6 +586,27 @@ var update = function (value) {
         material = materials[object.userData.buildingStoryMaterialName];
         break;
       case "Data":
+        var value = null;
+        var hue = 0.0;
+        var saturation = 1.0;
+        var lightness = 1.0;
+        var object_variables = object.userData.variables.filter(function(x){return x.name == settings.variableName});
+        if (object_variables.length > 0){
+          var object_variable = object_variables[0];
+          if (object_variable.valueIndex){
+            value = variable.values[object_variable.valueIndex][i];
+            if (value){
+              hue = (value-variable.valueMin) / (variable.valueMax - variable.valueMin);
+              saturation = 0.8;
+              lightness = 0.5;
+            }
+          }
+        }
+        
+        object.userData.variableValue = value;
+        
+        material = new THREE.MeshBasicMaterial({side: THREE.DoubleSide});
+        material.color.setHSL(hue, saturation, lightness);
         break;        
     }
   
@@ -611,9 +661,23 @@ var update = function (value) {
   }
 };
 
+var updateVariable = function (variableName) {
+  var variables = os_data.variables.filter(function(x){return x.name == variableName});
+  if (variables.length > 0){
+    variable = variables[0];
+  }
+};
+
 window.onload = function() {
+  
+  var has_data = (os_data.metadata.variables && os_data.metadata.variables.length > 0);
+  
   var gui = new dat.GUI();
-  gui.add(settings, 'renderBy', ['Surface Type', 'Normal', 'Boundary', 'Construction', 'Thermal Zone', 'Space Type', 'Building Story', 'Data']).name('Render By').onChange(update);
+  var render_modes = ['Surface Type', 'Normal', 'Boundary', 'Construction', 'Thermal Zone', 'Space Type', 'Building Story'];
+  if (has_data){
+    render_modes.push('Data');
+  }
+  gui.add(settings, 'renderBy', render_modes).name('Render By').onChange(update);
   
   building_story_names = os_data.metadata.buildingStoryNames;
   building_story_names.unshift('All Stories');
@@ -649,15 +713,21 @@ window.onload = function() {
   //});
   //f2.open();
   
-  //if (os_data.metadata.hasData){
-  //  var f3 = gui.addFolder('Data Rendering');
-  //  f3.add(settings, 'orthographic').name('Orthographic');
-  //  f3.add(settings, 'xView').name('X View');
-  //  f3.add(settings, 'yView').name('Y View');
-  //  f3.add(settings, 'zView').name('Z View');
-  //  f3.add(settings, 'reset').name('Reset');
-  //  f3.open();
-  //}
+  if (has_data){
+  
+    variable_names = [];
+    for (variable of os_data.variables){
+      variable_names.push(variable.name);
+    }
+    variable = os_data.variables[0];
+    settings.variableName = variable.name;
+    
+    dataFolder = gui.addFolder('Data Rendering');
+    dataFolder.add(settings, 'variableName', variable_names).name('Variable Name').onChange(updateVariable);
+    dataFolder.add(settings, 'daySlider', 0, variable.numDays-1, 1).name('Day').onChange(update);
+    dataFolder.add(settings, 'hourSlider', variable.hoursPerInterval, 24, variable.hoursPerInterval).name('Hour').onChange(update);
+    dateTimeControl = dataFolder.add(settings, 'dateTime').name('Date Time').listen();
+  }
   
   update();
 };
