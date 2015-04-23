@@ -13,7 +13,7 @@
 <script>
 
 var os_data = <%=os_data %>;
-var info, renderer, scene, light, scene_objects, scene_edges, object_edges, coincident_objects, back_objects;
+var renderer, scene, light, scene_objects, scene_edges, object_edges, coincident_objects, back_objects;
 var perspectiveCamera, orthographicCamera, perspectiveControls, orthographicControls;
 var project, materials, variable;
 var dataFolder, dateTimeControl;
@@ -46,6 +46,33 @@ var settings = {
   hourSlider: 1,
   cycleHour: false,
   dateTime: ''
+};
+
+var color = function (x, min, max, palette) {
+  x = Math.min(Math.max(x, min), max);
+  var percent = (x-min)/(max-min);
+  var r = percent;
+  var b = percent;
+  var g = percent;
+
+  switch (palette) {
+    case 'sequential':
+      r = 1 - 0.392 * (1 + erf((percent - 0.869) / 0.255));
+      g = 1.021 - 0.456 * (1 + erf((percent - 0.527) / 0.376));
+      b = 1 - 0.493 * (1 + erf((percent - 0.272)/0.309));
+      break;
+    case 'diverging':
+      r = 0.237 - 2.13 * percent + 26.92 * Math.pow(percent, 2) - 65.5 * Math.pow(percent, 3) + 63.5 * Math.pow(percent, 4) - 22.36 * Math.pow(percent, 5);
+      g = Math.pow((0.572 + 1.524 * percent - 1.811 * Math.pow(percent, 2)) / (1 - 0.291 * percent + 0.1574 * Math.pow(percent, 2)), 2);
+      b = 1 / (1.579 - 4.03 * percent + 12.92 * Math.pow(percent, 2) - 31.4 * Math.pow(percent, 3) + 48.6 * Math.pow(percent, 4) - 23.36 * Math.pow(percent, 5));
+      break;
+    case 'rainbow':
+      r = (0.472 - 0.567 * percent + 4.05 * Math.pow(percent, 2)) / (1 + 8.72 * percent - 19.17 * Math.pow(percent, 2) + 14.1 * Math.pow(percent, 3));
+      g = 0.108932 - 1.22635 * percent + 27.284 * Math.pow(percent, 2) - 98.577 * Math.pow(percent, 3) + 163.3 * Math.pow(percent, 4) - 131.395 * Math.pow(percent, 5) + 40.634 * Math.pow(percent, 6);
+      b = 1 / (1.97 + 3.54 * percent - 68.5 * Math.pow(percent, 2) + 243 * Math.pow(percent, 3) - 297 * Math.pow(percent, 4) + 125 * Math.pow(percent, 5));
+      break;
+  }
+  return new THREE.Color(r, g, b);
 };
 
 init();
@@ -190,13 +217,18 @@ function init() {
   var css = document.head.appendChild(document.createElement('style'));
   css.innerHTML = 'body { font:600 12pt monospace; margin:0; overflow:hidden; }';
 
-  info = document.body.appendChild(document.createElement('div'));
-  info.style.cssText = 'left:20px; position:absolute; top:0; width:100%;';
-  info.innerHTML = '<div id=msg></div>';
-
   // Heads Up
   headsUp = document.body.appendChild(document.createElement('div'));
-  headsUp.style.cssText = 'background-color:#ddd; border-radius:8px; padding:0 5px 10px; opacity:0.85; position:absolute; left:50px; text-align:left; z-index:10;';
+  headsUp.style.cssText = 'background-color:#ddd; border-radius:8px; display:none; padding:0 5px 10px; opacity:0.85; position:absolute; left:50px; text-align:left; z-index:10;';
+  
+  // Color Bar
+  colorBarHeight = 40;
+  colorBarWidth = 256;
+  colorBar = document.body.appendChild(document.createElement('canvas'));
+  colorBar.setAttribute('id', 'color-bar');
+  colorBar.setAttribute('height', colorBarHeight);
+  colorBar.setAttribute('width', colorBarWidth);
+  colorBar.style.cssText = 'border:1px solid #aaa; display:none; position:absolute; bottom:20px; right:20px; pointer-events:none;';
 
   renderer = new THREE.WebGLRenderer({
     alpha: 1,
@@ -511,31 +543,21 @@ function erf(x) {
   return sign*y;
 }
 
-var color = function (x, min, max, palette) {
-  x = Math.min(Math.max(x, min), max);
-  var percent = (x-min)/(max-min);
-  var r = percent;
-  var b = percent;
-  var g = percent;
-
-  switch (palette) {
-    case 'sequential':
-      r = 1 - 0.392 * (1 + erf((percent - 0.869) / 0.255));
-      g = 1.021 - 0.456 * (1 + erf((percent - 0.527) / 0.376));
-      b = 1 - 0.493 * (1 + erf((percent - 0.272)/0.309));
-      break;
-    case 'diverging':
-      r = 0.237 - 2.13 * percent + 26.92 * Math.pow(percent, 2) - 65.5 * Math.pow(percent, 3) + 63.5 * Math.pow(percent, 4) - 22.36 * Math.pow(percent, 5);
-      g = Math.pow((0.572 + 1.524 * percent - 1.811 * Math.pow(percent, 2)) / (1 - 0.291 * percent + 0.1574 * Math.pow(percent, 2)), 2);
-      b = 1 / (1.579 - 4.03 * percent + 12.92 * Math.pow(percent, 2) - 31.4 * Math.pow(percent, 3) + 48.6 * Math.pow(percent, 4) - 23.36 * Math.pow(percent, 5));
-      break;
-    case 'rainbow':
-      r = (0.472 - 0.567 * percent + 4.05 * Math.pow(percent, 2)) / (1 + 8.72 * percent - 19.17 * Math.pow(percent, 2) + 14.1 * Math.pow(percent, 3));
-      g = 0.108932 - 1.22635 * percent + 27.284 * Math.pow(percent, 2) - 98.577 * Math.pow(percent, 3) + 163.3 * Math.pow(percent, 4) - 131.395 * Math.pow(percent, 5) + 40.634 * Math.pow(percent, 6);
-      b = 1 / (1.97 + 3.54 * percent - 68.5 * Math.pow(percent, 2) + 243 * Math.pow(percent, 3) - 297 * Math.pow(percent, 4) + 125 * Math.pow(percent, 5));
-      break;
+var updateColorBar = function() {
+  var ctx = colorBar.getContext('2d');
+  var colorBarData = ctx.createImageData(colorBarWidth, colorBarHeight);
+  var colorBarRow = [];
+  for (var i = 0; i < colorBarWidth; i++) {
+    var pixel = color(i, 0, colorBarWidth - 1, settings.colorScheme);
+    colorBarRow[i*4]   = pixel.r * 255;
+    colorBarRow[i*4+1] = pixel.g * 255;
+    colorBarRow[i*4+2] = pixel.b * 255;
+    colorBarRow[i*4+3] = 255;
   }
-  return new THREE.Color(r, g, b);
+  for (var i = 0; i < colorBarData.data.length; i++) {
+    colorBarData.data[i] = colorBarRow[i % (colorBarWidth*4)];
+  }
+  ctx.putImageData(colorBarData, 0, 0);
 };
 
 var gui = null;
@@ -556,7 +578,7 @@ var update = function (value) {
 
     dataFolder = gui.addFolder('Data Rendering');
     dataFolder.add(settings, 'variableName', variable_names).name('Variable').onChange(updateVariable);
-    dataFolder.add(settings, 'colorScheme', {'Grayscale': 'grayscale', 'Sequential': 'sequential', 'Diverging': 'diverging', 'Rainbow': 'rainbow'}).name('Color Scheme').onChange(update);
+    dataFolder.add(settings, 'colorScheme', {'Grayscale': 'grayscale', 'Sequential': 'sequential', 'Diverging': 'diverging', 'Rainbow': 'rainbow'}).name('Color Scheme').onChange(function(){updateColorBar(); update();});
     dataFolder.add(settings, 'daySlider', 0, variable.numDays-1, 1).name('Day').onChange(update);
     dataFolder.add(settings, 'hourSlider', variable.hoursPerInterval, 24).step(variable.hoursPerInterval).name('Hour').listen().onChange(update);
     dataFolder.add(settings, 'cycleHour').name('Cycle Hour').onChange(function(cycleHourValue) {
@@ -569,6 +591,8 @@ var update = function (value) {
     });
     dateTimeControl = dataFolder.add(settings, 'dateTime').name('Date Time').listen();
     dataFolder.open();
+    document.getElementById('color-bar').style.display = 'inline';
+    updateColorBar();
   } else if (!isData && dataFolder) {
     gui.removeFolder('Data Rendering');
     dataFolder = null;
@@ -577,6 +601,7 @@ var update = function (value) {
       clearInterval(cycleIntervalId);
       cycleIntervalId = null;
     }
+    document.getElementById('color-bar').style.display = 'none';
   }
 
   if (settings.cycleHour) {
