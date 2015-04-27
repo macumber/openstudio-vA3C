@@ -5,11 +5,61 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r71/three.min.js"></script>
-<script src="http://mrdoob.github.io/three.js/examples/js/controls/OrbitControls.js"></script>
-<script src="http://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5/dat.gui.min.js"></script>
+<script src="https://mrdoob.github.io/three.js/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5/dat.gui.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/1.16.1/TweenLite.min.js"></script>
 </head>
 <body>
+<style type="text/css">
+#heads-up {
+  background-color:#ddd;
+  border-radius:8px;
+  display:none;
+  padding:0 5px 10px;
+  opacity:0.85;
+  position:absolute;
+  left:50px;
+  text-align:left;
+  z-index:10;
+}
+#color-bar {
+  border:1px solid #777;
+  position:absolute;
+  bottom:20px;
+  left:20px;
+  pointer-events:all;
+}
+#color-bar-container {
+  display:none;
+  pointer-events:none;
+  position:absolute;
+  transition:height 0.5s ease, transform 0.5s ease, top 0.5s ease, left 0.5s ease;
+}
+.ignore-transition {
+  transition:height 0.5s ease, transform 0.5s ease !important;
+}
+.color-bar-tick {
+  background-color:#777;
+  height:15px;
+  width:2px;
+  position:absolute;
+}
+.color-bar-text {
+  transform:rotate(300deg);
+  transform-origin:top left;
+  display:inline-block;
+  position:absolute;
+  color:#777;
+  transition: transform 0.5s ease;
+}
+.rotate {
+  height:1px !important; /* Fix for dragging when rotated */
+  transform:rotate(90deg);
+}
+.rotate .color-bar-text {
+  transform:rotate(270deg);
+}
+</style>
 <script>
 
 var os_data = <%=os_data %>;
@@ -17,43 +67,49 @@ var renderer, scene, light, scene_objects, scene_edges, object_edges, coincident
 var perspectiveCamera, orthographicCamera, perspectiveControls, orthographicControls;
 var project, materials, variable;
 var dataFolder, dateTimeControl;
+var colorBar, colorBarContainer, colorBarHeight, colorBarWidth;
+var mouseDownX, mouseDownY;
+var dragXStart, dragYStart;
 
 var raycaster;
 var mouse;
+var headsUp;
 var intersected, selected_material, selected_material_back;
 
 var settings = {
   renderBy: 'Surface Type',
   showStory: 'All Stories',
-  showFloors: true,
-  showWalls: true,
-  showRoofCeilings: true,
-  showWindows: true,
-  showDoors: true,
-  showShading: true,
-  showWireframe: false,
-  xView: function(){ setAllCameraAngles(0, 0, 1); },
-  yView: function(){ setAllCameraAngles(-90, 0, 1); },
-  zView: function(){ setAllCameraAngles(0, 90, 1); },
-  reset: function(){ setAllCameraAngles(-30, 30, 1); },
-  orthographic: false,
+  showFloors: (localStorage.getItem('showFloors') == null) ? true : (localStorage.getItem('showFloors') == 'true'),
+  showWalls: (localStorage.getItem('showWalls') == null) ? true : (localStorage.getItem('showWalls') == 'true'),
+  showRoofCeilings: (localStorage.getItem('showRoofCeilings') == null) ? true : (localStorage.getItem('showRoofCeilings') == 'true'),
+  showWindows: (localStorage.getItem('showWindows') == null) ? true : (localStorage.getItem('showWindows') == 'true'),
+  showDoors: (localStorage.getItem('showDoors') == null) ? true : (localStorage.getItem('showDoors') == 'true'),
+  showShading: (localStorage.getItem('showShading') == null) ? true : (localStorage.getItem('showShading') == 'true'),
+  showWireframe: (localStorage.getItem('showWireframe') == 'true') || false,
+  xView: function() {setAllCameraAngles(0, 0, 1);},
+  yView: function() {setAllCameraAngles(-90, 0, 1);},
+  zView: function() {setAllCameraAngles(0, 90, 1);},
+  reset: function() {setAllCameraAngles(-30, 30, 1);},
+  orthographic: (localStorage.getItem('orthographic') == 'true') || false,
   xSection: 0,
   ySection: 0,
   zSection: 0,
   variableName: '',
-  colorScheme: 'diverging',
+  colorScheme: localStorage.getItem('colorScheme') || 'diverging',
   daySlider: 0,
   hourSlider: 1,
   cycleHour: false,
+  cycleSpeed: parseFloat(localStorage.getItem('cycleSpeed')) || 1.0,
+  rotateColorBar: (localStorage.getItem('rotateColorBar') == 'true') || false,
   dateTime: ''
 };
 
 var color = function (x, min, max, palette) {
   x = Math.min(Math.max(x, min), max);
   var percent = (x-min)/(max-min);
-  var r = percent;
-  var b = percent;
-  var g = percent;
+  var r = 1 - percent;
+  var b = 1 - percent;
+  var g = 1 - percent;
 
   switch (palette) {
     case 'sequential':
@@ -74,6 +130,87 @@ var color = function (x, min, max, palette) {
   }
   return new THREE.Color(r, g, b);
 };
+function fitInWindow() {
+  var container = document.getElementById('color-bar-container');
+  var style = container.style;
+  if (!settings.rotateColorBar) {
+    var height = colorBarHeight + 112;
+    var width = colorBarWidth + 42;
+    var top = parseInt(style.top);
+    var left = parseInt(style.left);
+    if (left < 0) {
+      style.left = 0;
+    } else if (window.innerWidth < (left + width)) {
+      style.left = (window.innerWidth - width) + 'px';
+    }
+    if (top < 0) {
+      style.top = 0;
+    } else if (window.innerHeight < (top + height)) {
+      style.top = (window.innerHeight - height) + 'px';
+    }
+  } else {
+    var half = (colorBarWidth + 42) / 2;
+    var height = colorBarWidth + 42;
+    var width = colorBarHeight + 112;
+    var top = parseInt(style.top) - half;
+    var left = parseInt(style.left) + half;
+    if (left < 0) {
+      style.left = -half + 'px';
+    } else if (window.innerWidth < (left + width)) {
+      style.left = (window.innerWidth - width - half) + 'px';
+    }
+    if (top < 0) {
+      style.top = half + 'px';
+    } else if (window.innerHeight < (top + height)) {
+      style.top = (window.innerHeight - height + half) + 'px';
+    }
+  }
+}
+function updateColorBarSelection(value) {
+  var line = document.getElementById('color-bar-selection-line');
+  var text = document.getElementById('color-bar-selection-text');
+  if (value != '') {
+    var percent = (value - variable.valueMin) / (variable.valueMax - variable.valueMin);
+    line.style.left = (20 + colorBarWidth * percent) + 'px';
+    text.style.left = (10 + colorBarWidth * percent) + 'px';
+    text.innerHTML = Math.round(value * 100) / 100;
+  } else {
+    line.style.display = 'none';
+    text.style.display = 'none';
+  }
+}
+function updateBalloonValue(value) {
+  var span = document.getElementById('balloon-value');
+  if (span) span.innerHTML = value;
+}
+function removeSelection() {
+  selectObject(null);
+  headsUp.style.display = 'none';
+  document.body.style.cursor = 'auto';
+  document.getElementById('color-bar-selection-line').style.display = 'none';
+  document.getElementById('color-bar-selection-text').style.display = 'none';
+}
+function allowDrop(ev) {
+  ev.preventDefault();
+}
+function drag(ev) {
+  dragXStart = ev.x;
+  dragYStart = ev.y;
+}
+function drop(ev) {
+  ev.preventDefault();
+  var container = document.getElementById('color-bar-container')
+  container.classList.add('ignore-transition');
+  var style = container.style;
+  var top = parseInt(style.top) + (ev.y - dragYStart);
+  var left = parseInt(style.left) + (ev.x - dragXStart);
+  style.top = top + 'px';
+  style.left = left + 'px';
+  setTimeout(function() {container.classList.remove('ignore-transition');}, 1);
+  fitInWindow();
+  localStorage.setItem('colorBarTop', parseInt(style.top));
+  localStorage.setItem('colorBarLeft', parseInt(style.left));
+}
 
 init();
 animate();
@@ -219,16 +356,60 @@ function init() {
 
   // Heads Up
   headsUp = document.body.appendChild(document.createElement('div'));
-  headsUp.style.cssText = 'background-color:#ddd; border-radius:8px; display:none; padding:0 5px 10px; opacity:0.85; position:absolute; left:50px; text-align:left; z-index:10;';
-  
+  headsUp.setAttribute('id', 'heads-up');
+
   // Color Bar
   colorBarHeight = 40;
   colorBarWidth = 256;
-  colorBar = document.body.appendChild(document.createElement('canvas'));
+  colorBar = document.createElement('canvas');
   colorBar.setAttribute('id', 'color-bar');
   colorBar.setAttribute('height', colorBarHeight);
   colorBar.setAttribute('width', colorBarWidth);
-  colorBar.style.cssText = 'border:1px solid #aaa; display:none; position:absolute; bottom:20px; right:20px; pointer-events:none;';
+
+  document.documentElement.setAttribute('ondrop', 'drop(event)');
+  document.documentElement.setAttribute('ondragover', 'allowDrop(event)');
+
+  var top = localStorage.getItem('colorBarTop') || 0;
+  var left = localStorage.getItem('colorBarLeft') || 0;
+  colorBarContainer = document.body.appendChild(document.createElement('div'));
+  colorBarContainer.setAttribute('id', 'color-bar-container');
+  colorBarContainer.setAttribute('draggable', 'true');
+  colorBarContainer.setAttribute('ondragstart', 'drag(event)');
+  colorBarContainer.style.height = (colorBarHeight + 112) + 'px';
+  colorBarContainer.style.width = (colorBarWidth + 42) + 'px';
+  colorBarContainer.style.top = top + 'px';
+  colorBarContainer.style.left = left + 'px';
+  if (settings.rotateColorBar) colorBarContainer.classList.add('rotate');
+  colorBarContainer.appendChild(colorBar);
+
+  var bar = document.createElement('div');
+  bar.classList.add('color-bar-tick');
+  bar.style.bottom = (colorBarHeight + 21) + 'px';
+  bar.style.left = 20 + 'px';
+  colorBarContainer.appendChild(bar);
+  bar = bar.cloneNode();
+  bar.style.left = 20 + colorBarWidth + 'px';
+  colorBarContainer.appendChild(bar);
+  bar = bar.cloneNode();
+  bar.setAttribute('id', 'color-bar-selection-line');
+  bar.style.display = 'none';
+  bar.style.bottom = '20px';
+  bar.style.height = '56px';
+  colorBarContainer.appendChild(bar);
+
+  var text = document.createElement('span');
+  text.classList.add('color-bar-text');
+  text.setAttribute('id', 'color-bar-min');
+  text.style.bottom = (colorBarHeight + 30) + 'px';
+  text.style.left = 10 + 'px';
+  colorBarContainer.appendChild(text);
+  text = text.cloneNode();
+  text.setAttribute('id', 'color-bar-max');
+  text.style.left = 10 + colorBarWidth + 'px';
+  colorBarContainer.appendChild(text);
+  text = text.cloneNode();
+  text.setAttribute('id', 'color-bar-selection-text');
+  colorBarContainer.appendChild(text);
 
   renderer = new THREE.WebGLRenderer({
     alpha: 1,
@@ -357,7 +538,8 @@ function init() {
 
   materials = parseMaterials(os_data.materials);
 
-  document.addEventListener('click', onDocumentMouseClick, false);
+  renderer.domElement.addEventListener('mousedown', onDocumentMouseDown, false);
+  renderer.domElement.addEventListener('click', onDocumentMouseClick, false);
 }
 
 function setSelectedMaterial(object) {
@@ -428,85 +610,76 @@ function selectObject(object) {
   }
 }
 
+function onDocumentMouseDown(event) {
+  mouseDownX = event.clientX;
+  mouseDownY = event.clientY;
+}
 function onDocumentMouseClick(event) {
-  mouse.x = (event.clientX / renderer.domElement.width) * 2 - 1;
-  mouse.y = -(event.clientY / renderer.domElement.height) * 2 + 1;
+  // Only act on the mouse click if it was an actual click, not a drag to orbit the camera
+  if (mouseDownX == event.clientX && mouseDownY == event.clientY) {
+    mouse.x = (event.clientX / renderer.domElement.width) * 2 - 1;
+    mouse.y = -(event.clientY / renderer.domElement.height) * 2 + 1;
 
-  if (settings.orthographic){
-    raycaster.setFromCamera(mouse, orthographicCamera);
-  }else{
-    raycaster.setFromCamera(mouse, perspectiveCamera);
-  }
-
-  // raycaster intersects invisible objects so filter first
-  var pickable = scene_objects.filter(function(x){return x.visible;});
-  intersects = raycaster.intersectObjects(pickable);
-  if (intersects.length) {
-
-    selectObject(intersects[0].object);
-
-    headsUp.style.left = 10 + 0.5 * window.innerWidth + mouse.x * 0.5 * window.innerWidth + 'px';
-    headsUp.style.top = -10 + 0.5 * window.innerHeight - mouse.y * 0.5 * window.innerHeight + 'px';
-    headsUp.style.display = '';
-
-    var txt;
-    switch (settings.renderBy) {
-      case "Surface Type":
-        txt = 'Name: ' + intersected.userData.name + '<br>' +
-              'Surface Type: ' + intersected.userData.surfaceType + '<br>' +
-              'Space Name: ' + intersected.userData.spaceName + '<br>' +
-              '';
-        break;
-      case "Normal":
-        txt = 'Name: ' + intersected.userData.name + '<br>' +
-              'Surface Type: ' + intersected.userData.surfaceType + '<br>' +
-              'Space Name: ' + intersected.userData.spaceName + '<br>' +
-              '';
-        break;
-      case "Boundary":
-        txt = 'Name: ' + intersected.userData.name + '<br>' +
-              'Outside Boundary Condition: ' + intersected.userData.outsideBoundaryCondition + '<br>' +
-              'Sun Exposure: ' + intersected.userData.sunExposure + '<br>' +
-              'Wind Exposure: ' + intersected.userData.windExposure + '<br>' +
-              '';
-        break;
-      case "Construction":
-        txt = 'Name: ' + intersected.userData.name + '<br>' +
-              'Construction Name: ' + intersected.userData.constructionName + '<br>' +
-              '';
-        break;
-      case "Thermal Zone":
-        txt = 'Name: ' + intersected.userData.name + '<br>' +
-              'Thermal Zone: ' + intersected.userData.thermalZoneName + '<br>' +
-              '';
-        break;
-      case "Space Type":
-        txt = 'Name: ' + intersected.userData.name + '<br>' +
-              'Space Type: ' + intersected.userData.spaceTypeName + '<br>' +
-              '';
-        break;
-      case "Building Story":
-        txt = 'Name: ' + intersected.userData.name + '<br>' +
-              'Story Name: ' + intersected.userData.buildingStoryName + '<br>' +
-              '';
-        break;
-      case "Data":
-        txt = 'Name: ' + intersected.userData.name + '<br>' +
-              'Variable Value: ' + intersected.userData.variableValue + '<br>' +
-              '';
-        break;
+    if (settings.orthographic){
+      raycaster.setFromCamera(mouse, orthographicCamera);
+    }else{
+      raycaster.setFromCamera(mouse, perspectiveCamera);
     }
 
-    headsUp.innerHTML = txt;
-    document.body.style.cursor = 'pointer';
+    // raycaster intersects invisible objects so filter first
+    var pickable = scene_objects.filter(function(x){return x.visible;});
+    intersects = raycaster.intersectObjects(pickable);
+    if (intersects.length) {
 
-  } else {
+      selectObject(intersects[0].object);
 
-    selectObject(null);
-    headsUp.style.display = 'none';
-    document.body.style.cursor = 'auto';
+      headsUp.style.left = 10 + 0.5 * window.innerWidth + mouse.x * 0.5 * window.innerWidth + 'px';
+      headsUp.style.top = -10 + 0.5 * window.innerHeight - mouse.y * 0.5 * window.innerHeight + 'px';
+      headsUp.style.display = 'block';
+      document.getElementById('color-bar-selection-line').style.display = 'block';
+      document.getElementById('color-bar-selection-text').style.display = 'inline-block';
+
+      var txt = 'Name: ' + intersected.userData.name + '<br>';
+      switch (settings.renderBy) {
+        case "Surface Type":
+          txt += 'Surface Type: ' + intersected.userData.surfaceType + '<br>' +
+                'Space Name: ' + intersected.userData.spaceName;
+          break;
+        case "Normal":
+          txt += 'Surface Type: ' + intersected.userData.surfaceType + '<br>' +
+                'Space Name: ' + intersected.userData.spaceName;
+          break;
+        case "Boundary":
+          txt += 'Outside Boundary Condition: ' + intersected.userData.outsideBoundaryCondition + '<br>' +
+                'Sun Exposure: ' + intersected.userData.sunExposure + '<br>' +
+                'Wind Exposure: ' + intersected.userData.windExposure;
+          break;
+        case "Construction":
+          txt += 'Construction Name: ' + intersected.userData.constructionName;
+          break;
+        case "Thermal Zone":
+          txt += 'Thermal Zone: ' + intersected.userData.thermalZoneName;
+          break;
+        case "Space Type":
+          txt += 'Space Type: ' + intersected.userData.spaceTypeName;
+          break;
+        case "Building Story":
+          txt += 'Story Name: ' + intersected.userData.buildingStoryName;
+          break;
+        case "Data":
+          if (intersected.userData.variableValue != '') {
+            txt += 'Variable Value: <span id="balloon-value">' + intersected.userData.variableValue + '</span> ' + intersected.userData.variableUnits;
+          }
+          updateColorBarSelection(intersected.userData.variableValue);
+          break;
+      }
+
+      headsUp.innerHTML = txt;
+      document.body.style.cursor = 'pointer';
+    } else {
+      removeSelection();
+    }
   }
-
 }
 
 function animate(timestamp) {
@@ -558,14 +731,21 @@ var updateColorBar = function() {
     colorBarData.data[i] = colorBarRow[i % (colorBarWidth*4)];
   }
   ctx.putImageData(colorBarData, 0, 0);
+
+  document.getElementById('color-bar-min').innerHTML = Math.round(variable.valueMin * 100) / 100;
+  document.getElementById('color-bar-max').innerHTML = Math.round(variable.valueMax * 100) / 100;
 };
+function cycleHour() {
+  if (settings.cycleHour) {
+    settings.hourSlider = settings.hourSlider % 24 + 1;
+    update();
+    setTimeout(cycleHour, 1000 / settings.cycleSpeed);
+  }
+}
 
 var gui = null;
 var dataFolder = null;
-var cycleIntervalId = null;
 var update = function (value) {
-  selectObject(null);
-
   renderBy = settings.renderBy;
   isData = (renderBy == 'Data');
   if (isData && !dataFolder){
@@ -578,46 +758,43 @@ var update = function (value) {
 
     dataFolder = gui.addFolder('Data Rendering');
     dataFolder.add(settings, 'variableName', variable_names).name('Variable').onChange(updateVariable);
-    dataFolder.add(settings, 'colorScheme', {'Grayscale': 'grayscale', 'Sequential': 'sequential', 'Diverging': 'diverging', 'Rainbow': 'rainbow'}).name('Color Scheme').onChange(function(){updateColorBar(); update();});
+    dataFolder.add(settings, 'colorScheme', {'Grayscale': 'grayscale', 'Sequential': 'sequential', 'Diverging': 'diverging', 'Rainbow': 'rainbow'}).name('Color Scheme').onChange(function(value) {
+      localStorage.setItem('colorScheme', value);
+      updateColorBar();
+      update(value);
+    });
     dataFolder.add(settings, 'daySlider', 0, variable.numDays-1, 1).name('Day').onChange(update);
     dataFolder.add(settings, 'hourSlider', variable.hoursPerInterval, 24).step(variable.hoursPerInterval).name('Hour').listen().onChange(update);
+    dateTimeControl = dataFolder.add(settings, 'dateTime').name('Date Time').listen();
+    dataFolder.add(settings, 'rotateColorBar').name('Rotate Color Bar').onChange(function(value) {
+      if (value) {
+        colorBarContainer.classList.add('rotate');
+      } else {
+        colorBarContainer.classList.remove('rotate');
+      }
+      fitInWindow();
+      localStorage.setItem('rotateColorBar', value);
+    });
     dataFolder.add(settings, 'cycleHour').name('Cycle Hour').onChange(function(cycleHourValue) {
       if (cycleHourValue) {
-        cycleIntervalId = setInterval(update, 1000);
-      } else {
-        clearInterval(cycleIntervalId);
-        cycleIntervalId = null;
+        cycleHour();
       }
     });
-    dateTimeControl = dataFolder.add(settings, 'dateTime').name('Date Time').listen();
+    dataFolder.add(settings, 'cycleSpeed', 1, 10).name('Cycle Speed').onChange(function(value) {
+      localStorage.setItem('cycleSpeed', value);
+    });
     dataFolder.open();
-    document.getElementById('color-bar').style.display = 'inline';
+    document.getElementById('color-bar-container').style.display = 'block';
+    fitInWindow();
     updateColorBar();
   } else if (!isData && dataFolder) {
     gui.removeFolder('Data Rendering');
     dataFolder = null;
     if (settings.cycleHour) {
       settings.cycleHour = false;
-      clearInterval(cycleIntervalId);
-      cycleIntervalId = null;
     }
-    document.getElementById('color-bar').style.display = 'none';
+    document.getElementById('color-bar-container').style.display = 'none';
   }
-
-  if (settings.cycleHour) {
-    settings.hourSlider = Math.floor((new Date()).getTime()/1000 % 24) + 1;
-  }
-
-  showStory = settings.showStory;
-  allStories = (showStory == 'All Stories');
-
-  showFloors = settings.showFloors;
-  showWalls = settings.showWalls;
-  showRoofCeilings = settings.showRoofCeilings;
-  showWindows = settings.showWindows;
-  showDoors = settings.showDoors;
-  showShading = settings.showShading;
-  showWireframe = settings.showWireframe;
 
   var i = null;
   var time = null;
@@ -629,10 +806,10 @@ var update = function (value) {
     var d = new Date(0); // The 0 there is the key, which sets the date to the epoch
     d.setUTCSeconds(time);
 
-    settings.dateTime = ('0' + (d.getUTCMonth()+1)).slice(-2) + "/" + ('0'+d.getUTCDate()).slice(-2) + " - " + ('0'+d.getUTCHours()).slice(-2) + ":" + ('0'+d.getUTCMinutes()).slice(-2);
+    settings.dateTime = ('0' + (d.getUTCMonth()+1)).slice(-2) + '/' + ('0'+d.getUTCDate()).slice(-2) + ' - ' + ('0'+d.getUTCHours()).slice(-2) + ':' + ('0'+d.getUTCMinutes()).slice(-2);
     dateTimeControl.updateDisplay();
 
-    if (variable.units.length){
+    if (variable.units.length) {
       units = ' (' + variable.units + ')';
     }
   }
@@ -643,23 +820,23 @@ var update = function (value) {
 
     object.visible = true;
 
-    if (allStories || showStory == object.userData.buildingStoryName){
+    if (settings.showStory == 'All Stories' || settings.showStory == object.userData.buildingStoryName){
       // no-op
     }else{
       object.visible = false;
     }
 
-    if (!showFloors && surfaceType == 'Floor'){
+    if (!settings.showFloors && surfaceType == 'Floor'){
       object.visible = false;
-    }else if (!showWalls && surfaceType == 'Wall'){
+    }else if (!settings.showWalls && surfaceType == 'Wall'){
       object.visible = false;
-    }else if (!showRoofCeilings && surfaceType == 'RoofCeiling'){
+    }else if (!settings.showRoofCeilings && surfaceType == 'RoofCeiling'){
       object.visible = false;
-    }else if (!showWindows && surfaceType.indexOf('Window') > -1){
+    }else if (!settings.showWindows && surfaceType.indexOf('Window') > -1){
       object.visible = false;
-    }else if (!showDoors && surfaceType.indexOf('Door') > -1){
+    }else if (!settings.showDoors && surfaceType.indexOf('Door') > -1){
       object.visible = false;
-    }else if (!showShading && (surfaceType.indexOf('Shading') > -1)){
+    }else if (!settings.showShading && (surfaceType.indexOf('Shading') > -1)){
       object.visible = false;
     }
 
@@ -718,10 +895,16 @@ var update = function (value) {
           }
         }
 
-        if (value){
-          object.userData.variableValue = value + units;
+        if (value) {
+          object.userData.variableValue = value;
+          object.userData.variableUnits = units;
         }else{
           object.userData.variableValue = '';
+          object.userData.variableUnits = '';
+        }
+        if (intersected) {
+          updateBalloonValue(intersected.userData.variableValue);
+          updateColorBarSelection(intersected.userData.variableValue);
         }
 
         material = new THREE.MeshBasicMaterial({side: THREE.DoubleSide});
@@ -737,7 +920,7 @@ var update = function (value) {
     }
 
     var edge = object_edges[object.uuid];
-    if (showWireframe || object.visible){
+    if (settings.showWireframe || object.visible){
       edge.visible = true;
     }else{
       edge.visible = false;
@@ -788,7 +971,7 @@ var updateVariable = function (variableName) {
   }
 };
 
-window.onload = function() {
+document.addEventListener('DOMContentLoaded', function(event) {
 
   var has_data = (os_data.metadata.variables && os_data.metadata.variables.length);
 
@@ -804,24 +987,60 @@ window.onload = function() {
   if (has_data){
     render_modes.push('Data');
   }
-  gui.add(settings, 'renderBy', render_modes).name('Render By').onChange(update);
+  gui.add(settings, 'renderBy', render_modes).name('Render By').onChange(function(value) {
+    removeSelection();
+    update(value);
+  });
 
   building_story_names = os_data.metadata.buildingStoryNames;
   building_story_names.unshift('All Stories');
-  gui.add(settings, 'showStory', building_story_names).name('Show Story').onChange(update);
+  gui.add(settings, 'showStory', building_story_names).name('Show Story').onChange(function(value) {
+    removeSelection();
+    update(value);
+  });
 
   var f1 = gui.addFolder('Surface Filters');
-  f1.add(settings, 'showFloors').name('Show Floors').onChange(update);
-  f1.add(settings, 'showWalls').name('Show Walls').onChange(update);
-  f1.add(settings, 'showRoofCeilings').name('Show Roofs').onChange(update);
-  f1.add(settings, 'showWindows').name('Show Windows').onChange(update);
-  f1.add(settings, 'showDoors').name('Show Doors').onChange(update);
-  f1.add(settings, 'showShading').name('Show Shading').onChange(update);
-  f1.add(settings, 'showWireframe').name('Show Wireframe').onChange(update);
+  f1.add(settings, 'showFloors').name('Show Floors').onChange(function(value) {
+    removeSelection();
+    localStorage.setItem('showFloors', value);
+    update(value);
+  });
+  f1.add(settings, 'showWalls').name('Show Walls').onChange(function(value) {
+    removeSelection();
+    localStorage.setItem('showWalls', value);
+    update(value);
+  });
+  f1.add(settings, 'showRoofCeilings').name('Show Roofs').onChange(function(value) {
+    removeSelection();
+    localStorage.setItem('showRoofCeilings', value);
+    update(value);
+  });
+  f1.add(settings, 'showWindows').name('Show Windows').onChange(function(value) {
+    removeSelection();
+    localStorage.setItem('showWindows', value);
+    update(value);
+  });
+  f1.add(settings, 'showDoors').name('Show Doors').onChange(function(value) {
+    removeSelection();
+    localStorage.setItem('showDoors', value);
+    update(value);
+  });
+  f1.add(settings, 'showShading').name('Show Shading').onChange(function(value) {
+    removeSelection();
+    localStorage.setItem('showShading', value);
+    update(value);
+  });
+  f1.add(settings, 'showWireframe').name('Show Wireframe').onChange(function(value) {
+    removeSelection();
+    localStorage.setItem('showWireframe', value);
+    update(value);
+  });
   f1.open();
 
   var f2 = gui.addFolder('Camera');
-  f2.add(settings, 'orthographic').name('Orthographic');
+  f2.add(settings, 'orthographic').name('Orthographic').onChange(function(value) {
+    localStorage.setItem('orthographic', value);
+  });
   f2.add(settings, 'xView').name('X View');
   f2.add(settings, 'yView').name('Y View');
   f2.add(settings, 'zView').name('Z View');
@@ -841,7 +1060,7 @@ window.onload = function() {
   f2.open();*/
 
   update();
-};
+});
 </script>
 </body>
 </html>
