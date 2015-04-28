@@ -144,7 +144,7 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
           thermal_zone_name = thermal_zone.get.name.to_s.upcase
         end
       end
-      surface_data << {:surface_name => surface_name, :thermal_zone_name => thermal_zone_name, :valueIndex => nil}
+      surface_data << {:surface_name => surface_name, :thermal_zone_name => thermal_zone_name, :valueIndex => nil, :keyName=>nil}
     end
    
     times = nil
@@ -188,10 +188,12 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
 
       if i = surface_data.index{|s| s[:surface_name] == key}
         surface_data[i][:valueIndex] = valueIndex
+        surface_data[i][:keyName] = key
       else  
         surface_data.each do |s|
           if s[:thermal_zone_name] == key
             s[:valueIndex] = valueIndex
+            surface_data[i][:keyName] = key
           end
         end
       end
@@ -214,11 +216,13 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
       surface = surface_data.find{|x| x[:surface_name] == name}
       
       valueIndex = nil
+      keyName = nil
       if surface
         valueIndex = surface[:valueIndex]
+        keyName = surface[:keyName]
       end
       
-      child[:userData][:variables] = [{:name => variable_name, :valueIndex => valueIndex}]
+      child[:userData][:variables] = [{:name => variable_name, :valueIndex => valueIndex, :keyName=>keyName}]
       
     end
 

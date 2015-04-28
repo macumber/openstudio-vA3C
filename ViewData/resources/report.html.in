@@ -104,7 +104,12 @@ var settings = {
   dateTime: ''
 };
 
-var color = function (x, min, max, palette) {
+var getColor = function (x, min, max, palette) {
+
+  if (!x){
+    return new THREE.Color(255, 255, 255);
+  }
+  
   x = Math.min(Math.max(x, min), max);
   var percent = (x-min)/(max-min);
   var r = 1 - percent;
@@ -179,10 +184,23 @@ function updateColorBarSelection(value) {
     text.style.display = 'none';
   }
 }
-function updateBalloonValue(value) {
-  var span = document.getElementById('balloon-value');
-  if (span) span.innerHTML = value;
+function updateBalloon(object) {
+  var span = document.getElementById('balloon-variable-name');
+  if (span) span.innerHTML = object.userData.variableName;
+  
+  span = document.getElementById('balloon-variable-key-name');
+  if (span) span.innerHTML = object.userData.variableKeyName;
+  
+  span = document.getElementById('balloon-variable-date');
+  if (span) span.innerHTML = object.userData.variableDate;
+  
+  span = document.getElementById('balloon-variable-time');
+  if (span) span.innerHTML = object.userData.variableTime;
+
+  span = document.getElementById('balloon-variable-value');
+  if (span) span.innerHTML = object.userData.variableValue;
 }
+
 function removeSelection() {
   selectObject(null);
   headsUp.style.display = 'none';
@@ -415,7 +433,7 @@ function init() {
     alpha: 1,
     antialias: true,
     clearColor: 0xffffff
-  });
+  }); 
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMapEnabled = true;
   renderer.shadowMapSoft = true;
@@ -573,10 +591,21 @@ function restoreLastMaterial(object) {
 }
 
 function selectObject(object) {
+  renderBy = settings.renderBy;
+  isData = (renderBy == 'Data');
+  
   if (intersected != object){
 
     // restore material on currently selected
-    if (intersected) {
+    if (intersected){
+      edges = object_edges[intersected.uuid];
+      if (edges){
+        edges.material.color.setRGB(0,0,0);
+        edges.material.linewidth = 1;
+        edges.material.needsUpdate = true;
+      }
+    }
+    if (!isData && intersected) {
       restoreLastMaterial(intersected);
 
       coincident_intersected = coincident_objects[intersected.uuid];
@@ -594,7 +623,15 @@ function selectObject(object) {
     intersected = object;
 
     // save last material and set new one
-    if (intersected) {
+    if (intersected){
+      edges = object_edges[intersected.uuid];
+      if (edges){
+        edges.material.color.setRGB(0,255,0);
+        edges.material.linewidth = 4;
+        edges.material.needsUpdate = true;
+      }
+    }
+    if (!isData && intersected) {
       setSelectedMaterial(intersected);
 
       coincident_intersected = coincident_objects[intersected.uuid];
@@ -668,7 +705,11 @@ function onDocumentMouseClick(event) {
           break;
         case "Data":
           if (intersected.userData.variableValue != '') {
-            txt += 'Variable Value: <span id="balloon-value">' + intersected.userData.variableValue + '</span> ' + intersected.userData.variableUnits;
+            txt += 'Variable: <span id="balloon-variable-name">' + intersected.userData.variableName + '</span><br>';
+            txt += 'Key: <span id="balloon-variable-key-name">' + intersected.userData.variableKeyName + '</span><br>';
+            txt += 'Date: <span id="balloon-variable-date">' + intersected.userData.variableDate + '</span><br>';
+            txt += 'Time: <span id="balloon-variable-time">' + intersected.userData.variableTime + '</span><br>';
+            txt += 'Value: <span id="balloon-variable-value">' + intersected.userData.variableValue + '</span> ' + intersected.userData.variableUnits;
           }
           updateColorBarSelection(intersected.userData.variableValue);
           break;
@@ -721,7 +762,7 @@ var updateColorBar = function() {
   var colorBarData = ctx.createImageData(colorBarWidth, colorBarHeight);
   var colorBarRow = [];
   for (var i = 0; i < colorBarWidth; i++) {
-    var pixel = color(i, 0, colorBarWidth - 1, settings.colorScheme);
+    var pixel = getColor(i, 0, colorBarWidth - 1, settings.colorScheme);
     colorBarRow[i*4]   = pixel.r * 255;
     colorBarRow[i*4+1] = pixel.g * 255;
     colorBarRow[i*4+2] = pixel.b * 255;
@@ -797,20 +838,23 @@ var update = function (value) {
   }
 
   var i = null;
-  var time = null;
+  var date = '';
+  var time = '';
   var units = '';
   if (isData && variable){
     i = Math.floor(variable.intervalsPerDay*Math.floor(settings.daySlider) + variable.intervalsPerHour*Math.floor(settings.hourSlider)) - 1;
-    time = os_data.times[variable.timeIndex][i];
-
+    t = os_data.times[variable.timeIndex][i];
     var d = new Date(0); // The 0 there is the key, which sets the date to the epoch
-    d.setUTCSeconds(time);
+    d.setUTCSeconds(t);
+    
+    date = ('0' + (d.getUTCMonth()+1)).slice(-2) + '/' + ('0'+d.getUTCDate()).slice(-2);
+    time = ('0' + d.getUTCHours()).slice(-2) + ':' + ('0'+d.getUTCMinutes()).slice(-2);
 
-    settings.dateTime = ('0' + (d.getUTCMonth()+1)).slice(-2) + '/' + ('0'+d.getUTCDate()).slice(-2) + ' - ' + ('0'+d.getUTCHours()).slice(-2) + ':' + ('0'+d.getUTCMinutes()).slice(-2);
+    settings.dateTime = date + ' - ' + time;
     dateTimeControl.updateDisplay();
 
     if (variable.units.length) {
-      units = ' (' + variable.units + ')';
+      units = '(' + variable.units + ')';
     }
   }
 
@@ -879,40 +923,44 @@ var update = function (value) {
         break;
       case "Data":
         var value = null;
-        var hue = 0.0;
-        var saturation = 1.0;
-        var lightness = 1.0;
+        var keyName = '';
         var object_variables = object.userData.variables.filter(function(x){return x.name == settings.variableName;});
         if (object_variables.length){
           var object_variable = object_variables[0];
           if (object_variable.valueIndex){
             value = variable.values[object_variable.valueIndex][i];
-            if (value){
-              hue = (value-variable.valueMin) / (variable.valueMax - variable.valueMin);
-              saturation = 0.8;
-              lightness = 0.5;
-            }
+          }
+          if (object_variable.keyName){
+            keyName = object_variable.keyName;
           }
         }
 
         if (value) {
+          object.userData.variableName = settings.variableName;
+          object.userData.variableDate = date;
+          object.userData.variableTime = time;
+          object.userData.variableKeyName = keyName;
           object.userData.variableValue = value;
           object.userData.variableUnits = units;
         }else{
+          object.userData.variableName = settings.variableName;
+          object.userData.variableDate = date;
+          object.userData.variableTime = time;
+          object.userData.variableKeyName = keyName;          
           object.userData.variableValue = '';
-          object.userData.variableUnits = '';
-        }
-        if (intersected) {
-          updateBalloonValue(intersected.userData.variableValue);
-          updateColorBarSelection(intersected.userData.variableValue);
+          object.userData.variableUnits = units;
         }
 
         material = new THREE.MeshBasicMaterial({side: THREE.DoubleSide});
-        //material.color.setHSL(hue, saturation, lightness);
-        material.color.set(color(value, variable.valueMin, variable.valueMax, settings.colorScheme));
+        material.color.set(getColor(value, variable.valueMin, variable.valueMax, settings.colorScheme));
         break;
     }
-
+    
+    if (intersected) {
+      updateBalloon(intersected);
+      updateColorBarSelection(intersected.userData.variableValue);
+    }
+    
     object.material = material;
     object.material_double_sided = material_double_sided;
     if ( material !== null){
