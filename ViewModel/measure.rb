@@ -5,7 +5,7 @@ require 'erb'
 require_relative 'resources/va3c'
 
 #start the measure
-class ViewModel < OpenStudio::Ruleset::ReportingUserScript
+class ViewModel < OpenStudio::Ruleset::ModelUserScript
   
   #define the name that a user will see
   def name
@@ -23,37 +23,21 @@ class ViewModel < OpenStudio::Ruleset::ReportingUserScript
   end
 
   #define the arguments that the user will input
-  def arguments()
+  def arguments(model)
     args = OpenStudio::Ruleset::OSArgumentVector.new
     
     return args
   end 
   
   #define what happens when the measure is run
-  def run(runner, user_arguments)
-    super(runner, user_arguments)
+  def run(model, runner, user_arguments)
+    super(model, runner, user_arguments)
     
     #use the built-in error checking 
-    if not runner.validateUserArguments(arguments(), user_arguments)
+    if not runner.validateUserArguments(arguments(model), user_arguments)
       return false
     end
 
-    # get the last model and sql file
-    model = runner.lastOpenStudioModel
-    if model.empty?
-      runner.registerError("Cannot find last model.")
-      return false
-    end
-    model = model.get
-    
-    #sqlFile = runner.lastEnergyPlusSqlFile
-    #if sqlFile.empty?
-    #  runner.registerError("Cannot find last sql file.")
-    #  return false
-    #end
-    #sqlFile = sqlFile.get
-    #model.setSqlFile(sqlFile)
-    
     # convert the model to vA3C JSON format
     json = VA3C.convert_model(model)
 
@@ -99,13 +83,14 @@ class ViewModel < OpenStudio::Ruleset::ReportingUserScript
         file.flush
       end
     end
-    
-    #closing the sql file
-    #sqlFile.close()
 
-    #reporting final condition
-    #runner.registerFinalCondition("Model written.")
+    html_out_path = File.absolute_path(html_out_path)
     
+    #reporting final condition
+    runner.registerFinalCondition("Report written to <a href='file:///#{html_out_path}'>report.html</a>.")
+    
+    runner.registerAsNotApplicable("No changes made to the model.")
+
     return true
  
   end #end the run method

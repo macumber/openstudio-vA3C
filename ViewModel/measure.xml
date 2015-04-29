@@ -2,8 +2,8 @@
   <schema_version>3.0</schema_version>
   <name>view_model</name>
   <uid>f4669f10-fda5-489d-8e1c-7ca3c2d40378</uid>
-  <version_id>d828adf8-ee3c-47b2-af45-9318ab97dbc2</version_id>
-  <xml_checksum>2C8A3EEF</xml_checksum>
+  <version_id>0449c784-173d-488f-aef5-64454448f10d</version_id>
+  <xml_checksum>1E1F8B97</xml_checksum>
   <class_name>ViewModel</class_name>
   <display_name>ViewModel</display_name>
   <description>Visualize an OpenStudio model in a web based viewer</description>
@@ -16,7 +16,7 @@
   <attributes>
     <attribute>
       <name>Measure Type</name>
-      <value>ReportingMeasure</value>
+      <value>ModelMeasure</value>
       <datatype>string</datatype>
     </attribute>
     <attribute>
@@ -39,23 +39,6 @@
       <checksum>10636DB9</checksum>
     </file>
     <file>
-      <version>
-        <software_program>OpenStudio</software_program>
-        <identifier>1.6.3</identifier>
-        <min_compatible>1.6.3</min_compatible>
-      </version>
-      <filename>measure.rb</filename>
-      <filetype>rb</filetype>
-      <usage_type>script</usage_type>
-      <checksum>5D3B51CE</checksum>
-    </file>
-    <file>
-      <filename>ViewModel_Test.rb</filename>
-      <filetype>rb</filetype>
-      <usage_type>test</usage_type>
-      <checksum>8D24D007</checksum>
-    </file>
-    <file>
       <filename>va3c.rb</filename>
       <filetype>rb</filetype>
       <usage_type>resource</usage_type>
@@ -68,10 +51,21 @@
       <checksum>253FE630</checksum>
     </file>
     <file>
-      <filename>Issue1502.osm</filename>
-      <filetype>osm</filetype>
+      <filename>ViewModel_Test.rb</filename>
+      <filetype>rb</filetype>
       <usage_type>test</usage_type>
-      <checksum>8771EA9F</checksum>
+      <checksum>705A2705</checksum>
+    </file>
+    <file>
+      <version>
+        <software_program>OpenStudio</software_program>
+        <identifier>1.6.3</identifier>
+        <min_compatible>1.6.3</min_compatible>
+      </version>
+      <filename>measure.rb</filename>
+      <filetype>rb</filetype>
+      <usage_type>script</usage_type>
+      <checksum>A79A14EC</checksum>
     </file>
   </files>
 </measure>

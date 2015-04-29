@@ -42,8 +42,13 @@ class ViewModel_Test < MiniTest::Unit::TestCase
   # the actual test
   def test_ViewModel
      
+    # load the test model
+    translator = OpenStudio::OSVersion::VersionTranslator.new
     assert(File.exist?(modelPath()))
-     
+    model = translator.loadModel(modelPath())
+    assert((not model.empty?))
+    model = model.get
+    
     # create an instance of the measure
     measure = ViewModel.new
     
@@ -51,11 +56,8 @@ class ViewModel_Test < MiniTest::Unit::TestCase
     runner = OpenStudio::Ruleset::OSRunner.new
     
     # get arguments and test that they are what we are expecting
-    arguments = measure.arguments()
+    arguments = measure.arguments(model)
     assert_equal(0, arguments.size)
-    
-    # set up runner, this will happen automatically when measure is run in PAT
-    runner.setLastOpenStudioModelPath(OpenStudio::Path.new(modelPath()))    
 
     current_dir = Dir.pwd
     run_dir = File.dirname(__FILE__) + '/output'
@@ -65,10 +67,10 @@ class ViewModel_Test < MiniTest::Unit::TestCase
     
     # set argument values to good values and run the measure
     argument_map = OpenStudio::Ruleset::OSArgumentMap.new
-    measure.run(runner, argument_map)
+    measure.run(model, runner, argument_map)
     result = runner.result
     show_output(result)
-    assert(result.value.valueName == 'Success')
+    assert(result.value.valueName == 'NA')
     assert(result.warnings.size == 0)
     #assert(result.info.size == 1)
     
