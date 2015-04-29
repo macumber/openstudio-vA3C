@@ -2,7 +2,7 @@
   <schema_version>3.0</schema_version>
   <name>view_data</name>
   <uid>18cf0de7-48b8-48dc-ab68-0dd29f0b8bd0</uid>
-  <version_id>48df08a6-a99f-4473-919f-be8db1663bf9</version_id>
+  <version_id>cb8adc01-2ee9-451d-9e98-58d95f9ccf3b</version_id>
   <xml_checksum>2C8A3EEF</xml_checksum>
   <class_name>ViewData</class_name>
   <display_name>ViewData</display_name>
@@ -83,12 +83,6 @@
       <checksum>EDB52605</checksum>
     </file>
     <file>
-      <filename>report.html.in</filename>
-      <filetype>in</filetype>
-      <usage_type>resource</usage_type>
-      <checksum>253FE630</checksum>
-    </file>
-    <file>
       <filename>USA_CO_Golden-NREL.724666_TMY3.epw</filename>
       <filetype>epw</filetype>
       <usage_type>test</usage_type>
@@ -99,6 +93,12 @@
       <filetype>rb</filetype>
       <usage_type>test</usage_type>
       <checksum>FE169957</checksum>
+    </file>
+    <file>
+      <filename>report.html.in</filename>
+      <filetype>in</filetype>
+      <usage_type>resource</usage_type>
+      <checksum>5BDC7B87</checksum>
     </file>
   </files>
 </measure>

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>OpenStudio Model</title>
+<title>View OpenStudio Model</title>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r71/three.min.js"></script>
@@ -76,31 +76,77 @@ var mouse;
 var headsUp;
 var intersected, selected_material, selected_material_back;
 
+var getStringFromLocalStorage = function (key, defaultValue) {
+  try {
+    value = localStorage.getItem(key);
+    if (value == null){
+      return defaultValue;
+    }else{
+      return value;
+    }
+  } catch(e) {
+    return defaultValue;
+  }
+}
+
+var getBoolFromLocalStorage = function (key, defaultValue) {
+  try {
+    value = localStorage.getItem(key);
+    if (value == null){
+      return defaultValue;
+    }else{
+      return (value == 'true');
+    }
+  } catch(e) {
+    return defaultValue;
+  }
+}
+
+var getFloatFromLocalStorage = function (key, defaultValue) {
+  try {
+    value = localStorage.getItem(key);
+    if (value == null){
+      return defaultValue;
+    }else{
+      return parseFloat(value);
+    }
+  } catch(e) {
+    return defaultValue;
+  }
+}
+
+var setLocalStorage = function (key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch(e) {
+  }
+}
+
 var settings = {
   renderBy: 'Surface Type',
   showStory: 'All Stories',
-  showFloors: (localStorage.getItem('showFloors') == null) ? true : (localStorage.getItem('showFloors') == 'true'),
-  showWalls: (localStorage.getItem('showWalls') == null) ? true : (localStorage.getItem('showWalls') == 'true'),
-  showRoofCeilings: (localStorage.getItem('showRoofCeilings') == null) ? true : (localStorage.getItem('showRoofCeilings') == 'true'),
-  showWindows: (localStorage.getItem('showWindows') == null) ? true : (localStorage.getItem('showWindows') == 'true'),
-  showDoors: (localStorage.getItem('showDoors') == null) ? true : (localStorage.getItem('showDoors') == 'true'),
-  showShading: (localStorage.getItem('showShading') == null) ? true : (localStorage.getItem('showShading') == 'true'),
-  showWireframe: (localStorage.getItem('showWireframe') == 'true') || false,
+  showFloors: getBoolFromLocalStorage('showFloors', true),
+  showWalls: getBoolFromLocalStorage('showWalls', true),
+  showRoofCeilings: getBoolFromLocalStorage('showRoofCeilings', true),
+  showWindows: getBoolFromLocalStorage('showWindows', true),
+  showDoors: getBoolFromLocalStorage('showDoors', true),
+  showShading: getBoolFromLocalStorage('showShading', true),
+  showWireframe: getBoolFromLocalStorage('showWireframe', true),
   xView: function() {setAllCameraAngles(0, 0, 1);},
   yView: function() {setAllCameraAngles(-90, 0, 1);},
   zView: function() {setAllCameraAngles(0, 90, 1);},
   reset: function() {setAllCameraAngles(-30, 30, 1);},
-  orthographic: (localStorage.getItem('orthographic') == 'true') || false,
+  orthographic: getBoolFromLocalStorage('showWireframe', false),
   xSection: 0,
   ySection: 0,
   zSection: 0,
   variableName: '',
-  colorScheme: localStorage.getItem('colorScheme') || 'diverging',
+  colorScheme: getStringFromLocalStorage('colorScheme', 'diverging'),
   daySlider: 0,
   hourSlider: 1,
   cycleHour: false,
-  cycleSpeed: parseFloat(localStorage.getItem('cycleSpeed')) || 1.0,
-  rotateColorBar: (localStorage.getItem('rotateColorBar') == 'true') || false,
+  cycleSpeed: getFloatFromLocalStorage('cycleSpeed', 1.0),
+  rotateColorBar: getBoolFromLocalStorage('rotateColorBar', false),
   dateTime: ''
 };
 
@@ -226,8 +272,8 @@ function drop(ev) {
   style.left = left + 'px';
   setTimeout(function() {container.classList.remove('ignore-transition');}, 1);
   fitInWindow();
-  localStorage.setItem('colorBarTop', parseInt(style.top));
-  localStorage.setItem('colorBarLeft', parseInt(style.left));
+  setLocalStorage('colorBarTop', parseInt(style.top));
+  setLocalStorage('colorBarLeft', parseInt(style.left));
 }
 
 init();
@@ -387,8 +433,8 @@ function init() {
   document.documentElement.setAttribute('ondrop', 'drop(event)');
   document.documentElement.setAttribute('ondragover', 'allowDrop(event)');
 
-  var top = localStorage.getItem('colorBarTop') || 0;
-  var left = localStorage.getItem('colorBarLeft') || 0;
+  var top = getFloatFromLocalStorage('colorBarTop', 0);
+  var left = getFloatFromLocalStorage('colorBarLeft', 0);
   colorBarContainer = document.body.appendChild(document.createElement('div'));
   colorBarContainer.setAttribute('id', 'color-bar-container');
   colorBarContainer.setAttribute('draggable', 'true');
@@ -800,7 +846,7 @@ var update = function (value) {
     dataFolder = gui.addFolder('Data Rendering');
     dataFolder.add(settings, 'variableName', variable_names).name('Variable').onChange(updateVariable);
     dataFolder.add(settings, 'colorScheme', {'Grayscale': 'grayscale', 'Sequential': 'sequential', 'Diverging': 'diverging', 'Rainbow': 'rainbow'}).name('Color Scheme').onChange(function(value) {
-      localStorage.setItem('colorScheme', value);
+      setLocalStorage('colorScheme', value);
       updateColorBar();
       update(value);
     });
@@ -814,7 +860,7 @@ var update = function (value) {
         colorBarContainer.classList.remove('rotate');
       }
       fitInWindow();
-      localStorage.setItem('rotateColorBar', value);
+      setLocalStorage('rotateColorBar', value);
     });
     dataFolder.add(settings, 'cycleHour').name('Cycle Hour').onChange(function(cycleHourValue) {
       if (cycleHourValue) {
@@ -822,7 +868,7 @@ var update = function (value) {
       }
     });
     dataFolder.add(settings, 'cycleSpeed', 1, 10).name('Cycle Speed').onChange(function(value) {
-      localStorage.setItem('cycleSpeed', value);
+      setLocalStorage('cycleSpeed', value);
     });
     dataFolder.open();
     document.getElementById('color-bar-container').style.display = 'block';
@@ -1050,44 +1096,44 @@ document.addEventListener('DOMContentLoaded', function(event) {
   var f1 = gui.addFolder('Surface Filters');
   f1.add(settings, 'showFloors').name('Show Floors').onChange(function(value) {
     removeSelection();
-    localStorage.setItem('showFloors', value);
+    setLocalStorage('showFloors', value);
     update(value);
   });
   f1.add(settings, 'showWalls').name('Show Walls').onChange(function(value) {
     removeSelection();
-    localStorage.setItem('showWalls', value);
+    setLocalStorage('showWalls', value);
     update(value);
   });
   f1.add(settings, 'showRoofCeilings').name('Show Roofs').onChange(function(value) {
     removeSelection();
-    localStorage.setItem('showRoofCeilings', value);
+    setLocalStorage('showRoofCeilings', value);
     update(value);
   });
   f1.add(settings, 'showWindows').name('Show Windows').onChange(function(value) {
     removeSelection();
-    localStorage.setItem('showWindows', value);
+    setLocalStorage('showWindows', value);
     update(value);
   });
   f1.add(settings, 'showDoors').name('Show Doors').onChange(function(value) {
     removeSelection();
-    localStorage.setItem('showDoors', value);
+    setLocalStorage('showDoors', value);
     update(value);
   });
   f1.add(settings, 'showShading').name('Show Shading').onChange(function(value) {
     removeSelection();
-    localStorage.setItem('showShading', value);
+    setLocalStorage('showShading', value);
     update(value);
   });
   f1.add(settings, 'showWireframe').name('Show Wireframe').onChange(function(value) {
     removeSelection();
-    localStorage.setItem('showWireframe', value);
+    setLocalStorage('showWireframe', value);
     update(value);
   });
   f1.open();
 
   var f2 = gui.addFolder('Camera');
   f2.add(settings, 'orthographic').name('Orthographic').onChange(function(value) {
-    localStorage.setItem('orthographic', value);
+    setLocalStorage('orthographic', value);
   });
   f2.add(settings, 'xView').name('X View');
   f2.add(settings, 'yView').name('Y View');
