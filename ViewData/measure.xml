@@ -1,14 +1,41 @@
 <measure>
   <schema_version>3.0</schema_version>
-  <name>view_model</name>
+  <name>view_data</name>
   <uid>18cf0de7-48b8-48dc-ab68-0dd29f0b8bd0</uid>
-  <version_id>36ffebd1-dd45-4c7e-ad90-80d1d20c4bdb</version_id>
+  <version_id>48df08a6-a99f-4473-919f-be8db1663bf9</version_id>
   <xml_checksum>2C8A3EEF</xml_checksum>
-  <class_name>ViewModel</class_name>
-  <display_name>ViewModel</display_name>
-  <description>Visualize an OpenStudio model in a web based viewer</description>
-  <modeler_description>Converts the OpenStudio model to vA3C JSON format and renders using Three.js</modeler_description>
-  <arguments/>
+  <class_name>ViewData</class_name>
+  <display_name>ViewData</display_name>
+  <description>Visualize energy simulation data plotted on an OpenStudio model in a web based viewer</description>
+  <modeler_description>Converts the OpenStudio model to vA3C JSON format and renders using Three.js, simulation data is applied to surfaces of the model</modeler_description>
+  <arguments>
+    <argument>
+      <name>variable_name</name>
+      <display_name>Variable Name</display_name>
+      <type>String</type>
+      <required>true</required>
+      <model_dependent>false</model_dependent>
+      <default_value>Surface Outside Face Temperature</default_value>
+    </argument>
+    <argument>
+      <name>reporting_frequency</name>
+      <display_name>Reporting Frequency</display_name>
+      <type>Choice</type>
+      <required>true</required>
+      <model_dependent>false</model_dependent>
+      <default_value>Hourly</default_value>
+      <choices>
+        <choice>
+          <value>Timestep</value>
+          <display_name>Timestep</display_name>
+        </choice>
+        <choice>
+          <value>Hourly</value>
+          <display_name>Hourly</display_name>
+        </choice>
+      </choices>
+    </argument>
+  </arguments>
   <provenances/>
   <tags>
     <tag>Reporting.QAQC</tag>
@@ -27,16 +54,16 @@
   </attributes>
   <files>
     <file>
-      <filename>ExampleModel.osm</filename>
-      <filetype>osm</filetype>
-      <usage_type>test</usage_type>
-      <checksum>4D4C61B5</checksum>
-    </file>
-    <file>
       <filename>SimpleModel.osm</filename>
       <filetype>osm</filetype>
       <usage_type>test</usage_type>
       <checksum>AC094EF8</checksum>
+    </file>
+    <file>
+      <filename>ExampleModel.osm</filename>
+      <filetype>osm</filetype>
+      <usage_type>test</usage_type>
+      <checksum>10636DB9</checksum>
     </file>
     <file>
       <version>
@@ -47,25 +74,31 @@
       <filename>measure.rb</filename>
       <filetype>rb</filetype>
       <usage_type>script</usage_type>
-      <checksum>13AD435B</checksum>
-    </file>
-    <file>
-      <filename>ViewModel_Test.rb</filename>
-      <filetype>rb</filetype>
-      <usage_type>test</usage_type>
-      <checksum>96E163D6</checksum>
+      <checksum>5A8CDC61</checksum>
     </file>
     <file>
       <filename>va3c.rb</filename>
       <filetype>rb</filetype>
       <usage_type>resource</usage_type>
-      <checksum>CE33663A</checksum>
+      <checksum>EDB52605</checksum>
     </file>
     <file>
       <filename>report.html.in</filename>
       <filetype>in</filetype>
       <usage_type>resource</usage_type>
-      <checksum>0E0B7B61</checksum>
+      <checksum>253FE630</checksum>
+    </file>
+    <file>
+      <filename>USA_CO_Golden-NREL.724666_TMY3.epw</filename>
+      <filetype>epw</filetype>
+      <usage_type>test</usage_type>
+      <checksum>BDF687C1</checksum>
+    </file>
+    <file>
+      <filename>ViewData_Test.rb</filename>
+      <filetype>rb</filetype>
+      <usage_type>test</usage_type>
+      <checksum>FE169957</checksum>
     </file>
   </files>
 </measure>
