@@ -15,17 +15,7 @@ class ViewModel_Test < MiniTest::Unit::TestCase
     #return "#{File.dirname(__FILE__)}/SimpleModel.osm"
     return "#{File.dirname(__FILE__)}/ExampleModel.osm"
   end
-  
-  def runDir
-    #return "#{File.dirname(__FILE__)}/SimpleModel/"
-    return "#{File.dirname(__FILE__)}/ExampleModel/"
-  end
-  
-  def sqlPath
-    #return "#{File.dirname(__FILE__)}/SimpleModel/ModelToIdf/EnergyPlusPreProcess-0/EnergyPlus-0/eplusout.sql"
-    return "#{File.dirname(__FILE__)}/ExampleModel/ModelToIdf/EnergyPlusPreProcess-0/EnergyPlus-0/eplusout.sql"
-  end
-  
+
   def reportPath
     return 'output/report.json'
   end
@@ -38,33 +28,10 @@ class ViewModel_Test < MiniTest::Unit::TestCase
     end
     
     assert(File.exist?(modelPath()))
-    
-    #assert(File.exist?(runDir()))
-    
-    # DLM: we do not need sql data 
-    #if not File.exist?(sqlPath())
-    #  puts "Running EnergyPlus"
-    #  
-    #  co = OpenStudio::Runmanager::ConfigOptions.new(true)
-    #  co.findTools(false, true, false, true)
-    #  
-    #  wf = OpenStudio::Runmanager::Workflow.new("modeltoidf->energypluspreprocess->energyplus")
-    #  wf.add(co.getTools())
-    #  job = wf.create(OpenStudio::Path.new(runDir()), OpenStudio::Path.new(modelPath()))
-    #
-    #  rm = OpenStudio::Runmanager::RunManager.new
-    #  rm.enqueue(job, true)
-    #  rm.waitForFinished
-    #end
   end
 
   # delete output files
   def teardown
-  
-    # comment this out if you don't want to rerun EnergyPlus each time
-    if File.exist?(sqlPath())
-      #FileUtils.rm(sqlPath())
-    end
     
     # comment this out if you want to see the resulting report
     if File.exist?(reportPath())
@@ -76,7 +43,6 @@ class ViewModel_Test < MiniTest::Unit::TestCase
   def test_ViewModel
      
     assert(File.exist?(modelPath()))
-    #assert(File.exist?(sqlPath()))
      
     # create an instance of the measure
     measure = ViewModel.new
@@ -90,8 +56,7 @@ class ViewModel_Test < MiniTest::Unit::TestCase
     
     # set up runner, this will happen automatically when measure is run in PAT
     runner.setLastOpenStudioModelPath(OpenStudio::Path.new(modelPath()))    
-    runner.setLastEnergyPlusSqlFilePath(OpenStudio::Path.new(sqlPath()))    
-    
+
     current_dir = Dir.pwd
     run_dir = File.dirname(__FILE__) + '/output'
     FileUtils.rm_rf(run_dir) if File.exists?(run_dir)
