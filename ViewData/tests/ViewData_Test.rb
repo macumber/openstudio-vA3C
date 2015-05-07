@@ -15,6 +15,10 @@ class ViewData_Test < MiniTest::Unit::TestCase
     return './ExampleModel.osm'
   end
   
+  def workspacePath
+    return './output/ExampleModel/ModelToIdf/EnergyPlusPreProcess-0/out.idf'
+  end
+  
   def runDir
     return './output/ExampleModel/'
   end
@@ -73,8 +77,9 @@ class ViewData_Test < MiniTest::Unit::TestCase
   
   # the actual test
   def test_ViewModel
-     
+ 
     assert(File.exist?(modelPath()))
+    assert(File.exist?(workspacePath()))
     assert(File.exist?(sqlPath()))
      
     # create an instance of the measure
@@ -85,13 +90,24 @@ class ViewData_Test < MiniTest::Unit::TestCase
     
     # get arguments and test that they are what we are expecting
     arguments = measure.arguments()
-    assert_equal(2, arguments.size)
+    assert_equal(5, arguments.size)
   
     # create hash of argument values
     args_hash = {}
-    args_hash["variable_name"] = 'Surface Outside Face Temperature'
-    #args_hash["variable_name"] = 'Zone Mean Air Temperature'
+    args_hash["file_source"] = 'Last OSM'
     args_hash["reporting_frequency"] = 'Hourly'
+    
+    args_hash["variable1_name"] = 'Surface Outside Face Temperature'
+    args_hash["variable2_name"] = 'Surface Inside Face Temperature'
+    args_hash["variable3_name"] = 'Zone Mean Air Temperature'   
+
+    #args_hash["variable1_name"] = 'Surface Outside Face Temperature'
+    #args_hash["variable2_name"] = ''
+    #args_hash["variable3_name"] = ''  
+
+    #args_hash["variable1_name"] = 'Surface Outside Face Temperature'
+    #args_hash["variable2_name"] = 'Surface Outside Face Temperature'
+    #args_hash["variable3_name"] = 'Surface Outside Face Temperature'       
 
     # populate argument with specified hash value if specified
     argument_map = OpenStudio::Ruleset::OSArgumentMap.new
@@ -103,8 +119,11 @@ class ViewData_Test < MiniTest::Unit::TestCase
       argument_map[arg.name] = temp_arg_var
     end    
     
+    # make sure output requests are in pre-run model, this will happen automatically in PAT
+    
     # set up runner, this will happen automatically when measure is run in PAT
-    runner.setLastOpenStudioModelPath(OpenStudio::Path.new(modelPath()))    
+    runner.setLastOpenStudioModelPath(OpenStudio::Path.new(modelPath()))  
+    runner.setLastEnergyPlusWorkspacePath(OpenStudio::Path.new(workspacePath()))     
     runner.setLastEnergyPlusSqlFilePath(OpenStudio::Path.new(sqlPath()))    
     
     current_dir = Dir.pwd

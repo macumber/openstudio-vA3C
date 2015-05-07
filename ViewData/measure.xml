@@ -2,7 +2,7 @@
   <schema_version>3.0</schema_version>
   <name>view_data</name>
   <uid>18cf0de7-48b8-48dc-ab68-0dd29f0b8bd0</uid>
-  <version_id>cb8adc01-2ee9-451d-9e98-58d95f9ccf3b</version_id>
+  <version_id>11e22f7e-9d13-43bc-82fa-0a45aaa3a33a</version_id>
   <xml_checksum>2C8A3EEF</xml_checksum>
   <class_name>ViewData</class_name>
   <display_name>ViewData</display_name>
@@ -10,12 +10,22 @@
   <modeler_description>Converts the OpenStudio model to vA3C JSON format and renders using Three.js, simulation data is applied to surfaces of the model</modeler_description>
   <arguments>
     <argument>
-      <name>variable_name</name>
-      <display_name>Variable Name</display_name>
-      <type>String</type>
+      <name>file_source</name>
+      <display_name>Model Source</display_name>
+      <type>Choice</type>
       <required>true</required>
       <model_dependent>false</model_dependent>
-      <default_value>Surface Outside Face Temperature</default_value>
+      <default_value>Last OSM</default_value>
+      <choices>
+        <choice>
+          <value>Last OSM</value>
+          <display_name>Last OSM</display_name>
+        </choice>
+        <choice>
+          <value>Last IDF</value>
+          <display_name>Last IDF</display_name>
+        </choice>
+      </choices>
     </argument>
     <argument>
       <name>reporting_frequency</name>
@@ -34,6 +44,30 @@
           <display_name>Hourly</display_name>
         </choice>
       </choices>
+    </argument>
+    <argument>
+      <name>variable1_name</name>
+      <display_name>Variable 1 Name</display_name>
+      <type>String</type>
+      <required>true</required>
+      <model_dependent>false</model_dependent>
+      <default_value>Surface Outside Face Temperature</default_value>
+    </argument>
+    <argument>
+      <name>variable2_name</name>
+      <display_name>Variable 2 Name</display_name>
+      <type>String</type>
+      <required>true</required>
+      <model_dependent>false</model_dependent>
+      <default_value>Surface Inside Face Temperature</default_value>
+    </argument>
+    <argument>
+      <name>variable3_name</name>
+      <display_name>Variable 3 Name</display_name>
+      <type>String</type>
+      <required>true</required>
+      <model_dependent>false</model_dependent>
+      <default_value>Zone Mean Radiant Temperature</default_value>
     </argument>
   </arguments>
   <provenances/>
@@ -66,17 +100,6 @@
       <checksum>10636DB9</checksum>
     </file>
     <file>
-      <version>
-        <software_program>OpenStudio</software_program>
-        <identifier>1.6.3</identifier>
-        <min_compatible>1.6.3</min_compatible>
-      </version>
-      <filename>measure.rb</filename>
-      <filetype>rb</filetype>
-      <usage_type>script</usage_type>
-      <checksum>5A8CDC61</checksum>
-    </file>
-    <file>
       <filename>va3c.rb</filename>
       <filetype>rb</filetype>
       <usage_type>resource</usage_type>
@@ -89,16 +112,27 @@
       <checksum>BDF687C1</checksum>
     </file>
     <file>
+      <version>
+        <software_program>OpenStudio</software_program>
+        <identifier>1.6.3</identifier>
+        <min_compatible>1.6.3</min_compatible>
+      </version>
+      <filename>measure.rb</filename>
+      <filetype>rb</filetype>
+      <usage_type>script</usage_type>
+      <checksum>B38E0ACC</checksum>
+    </file>
+    <file>
       <filename>ViewData_Test.rb</filename>
       <filetype>rb</filetype>
       <usage_type>test</usage_type>
-      <checksum>FE169957</checksum>
+      <checksum>336E5CF7</checksum>
     </file>
     <file>
       <filename>report.html.in</filename>
       <filetype>in</filetype>
       <usage_type>resource</usage_type>
-      <checksum>5BDC7B87</checksum>
+      <checksum>E64E2D68</checksum>
     </file>
   </files>
 </measure>
