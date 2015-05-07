@@ -123,6 +123,7 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
     end
 
     file_source = runner.getStringArgumentValue('file_source',user_arguments)
+    from_idf = (file_source == 'Last IDF')
     reporting_frequency = runner.getStringArgumentValue('reporting_frequency',user_arguments)
     variable1_name = runner.getStringArgumentValue('variable1_name',user_arguments)
     variable2_name = runner.getStringArgumentValue('variable2_name',user_arguments)
@@ -159,15 +160,17 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
     end
     
     model = nil
-    if file_source == 'Last IDF'
+    if from_idf
       # get the last workspace
       workspace = runner.lastEnergyPlusWorkspace
       if workspace.empty?
         runner.registerError("Cannot find last workspace.")
         return false
       end
-      rt = OpenStudio::EnergyPlus::EnergyPlusReverseTranslator.new
+      workspace = workspace.get
+      rt = OpenStudio::EnergyPlus::ReverseTranslator.new
       model = rt.translateWorkspace(workspace)
+      runner.registerInfo("Loaded model with '#{model.getSpaces.size}' spaces")
     else
       # get the last model
       model = runner.lastOpenStudioModel
@@ -176,6 +179,7 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
         return false
       end
       model = model.get
+      runner.registerInfo("Loaded model with '#{model.getSpaces.size}' spaces") 
     end
     
     # get the last sql file
@@ -214,10 +218,16 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
       surface_name = surface.name.to_s.upcase
       thermal_zone_name = nil
       if (space = surface.space) && !space.empty?
-        if (thermal_zone = space.get.thermalZone) && !thermal_zone.empty?
-          thermal_zone_name = thermal_zone.get.name.to_s.upcase
+        if from_idf
+          # if we translated from IDF, the space name will be the E+ zone name
+          thermal_zone_name = space.get.name.to_s.upcase
+        else
+          if (thermal_zone = space.get.thermalZone) && !thermal_zone.empty?
+            thermal_zone_name = thermal_zone.get.name.to_s.upcase
+          end
         end
       end
+
       surface_data << {:surface_name => surface_name, :thermal_zone_name => thermal_zone_name, :variables => []}
     end
    
@@ -341,6 +351,7 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
     
     # configure template with variable values
     os_data = JSON::generate(json, {:object_nl=>"", :array_nl=>"", :indent=>""})
+    title = "View Data"
     renderer = ERB.new(html_in)
     html_out = renderer.result(binding)
 

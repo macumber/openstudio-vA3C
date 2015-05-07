@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>View OpenStudio Model</title>
+<title><%=title%></title>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r71/three.min.js"></script>
@@ -152,7 +152,7 @@ var settings = {
 
 var getColor = function (x, min, max, palette) {
 
-  if (!x){
+  if (x == null){
     return new THREE.Color(255, 255, 255);
   }
   
@@ -690,6 +690,9 @@ function selectObject(object) {
         removeMaterial(back_intersected);
       }
     }
+    if (isData && intersected) {
+      update();
+    }
   }
 }
 
@@ -750,7 +753,8 @@ function onDocumentMouseClick(event) {
           txt += 'Story Name: ' + intersected.userData.buildingStoryName;
           break;
         case "Data":
-          if (intersected.userData.variableValue != '') {
+          // in javascript (0 == '' == false)
+          if (intersected.userData.variableValue !== '') {
             txt += 'Variable: <span id="balloon-variable-name">' + intersected.userData.variableName + '</span><br>';
             txt += 'Key: <span id="balloon-variable-key-name">' + intersected.userData.variableKeyName + '</span><br>';
             txt += 'Date: <span id="balloon-variable-date">' + intersected.userData.variableDate + '</span><br>';
@@ -971,17 +975,17 @@ var update = function (value) {
         var value = null;
         var keyName = '';
         var object_variables = object.userData.variables.filter(function(x){return x.name == settings.variableName;});
-        if (object_variables.length){
+        if (object_variables.length > 0){
           var object_variable = object_variables[0];
-          if (object_variable.valueIndex){
+          if (object_variable.valueIndex != null){
             value = variable.values[object_variable.valueIndex][i];
           }
-          if (object_variable.keyName){
+          if (object_variable.keyName != null){
             keyName = object_variable.keyName;
           }
         }
-
-        if (value) {
+       
+        if (value != null) {
           object.userData.variableName = settings.variableName;
           object.userData.variableDate = date;
           object.userData.variableTime = time;
@@ -1063,6 +1067,8 @@ var updateVariable = function (variableName) {
   if (variables.length){
     variable = variables[0];
   }
+  updateColorBar();
+  update();
 };
 
 document.addEventListener('DOMContentLoaded', function(event) {

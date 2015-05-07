@@ -3244,3 +3244,16 @@ OS:WeatherFile,
   file:./USA_CO_Golden-NREL.724666_TMY3.epw, !- Url
   3CF64E88;                               !- Checksum
 
+OS:Output:Variable,
+  {c99e73e6-8986-4a39-b208-61c582b18845}, !- Handle
+  Output Variable 1,                      !- Name
+  *,                                      !- Key Value
+  Zone Air System Sensible Cooling Rate,  !- Variable Name
+  Hourly;                                 !- Reporting Frequency
+  
+OS:Output:Variable,
+  {970eb1c4-fd65-4f1e-8b87-948c662990c2}, !- Handle
+  Output Variable 2,                      !- Name
+  *,                                      !- Key Value
+  Zone Air System Sensible Cooling Rate,  !- Variable Name
+  Timestep;                               !- Reporting Frequency

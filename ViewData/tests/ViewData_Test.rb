@@ -81,7 +81,12 @@ class ViewData_Test < MiniTest::Unit::TestCase
     assert(File.exist?(modelPath()))
     assert(File.exist?(workspacePath()))
     assert(File.exist?(sqlPath()))
-     
+    
+    vt = OpenStudio::OSVersion::VersionTranslator.new
+    model = vt.loadModel(modelPath())
+    assert(model.is_initialized)
+    model = model.get
+         
     # create an instance of the measure
     measure = ViewData.new
     
@@ -95,13 +100,14 @@ class ViewData_Test < MiniTest::Unit::TestCase
     # create hash of argument values
     args_hash = {}
     args_hash["file_source"] = 'Last OSM'
+    #args_hash["file_source"] = 'Last IDF'
     args_hash["reporting_frequency"] = 'Hourly'
     
     args_hash["variable1_name"] = 'Surface Outside Face Temperature'
     args_hash["variable2_name"] = 'Surface Inside Face Temperature'
     args_hash["variable3_name"] = 'Zone Mean Air Temperature'   
 
-    #args_hash["variable1_name"] = 'Surface Outside Face Temperature'
+    #args_hash["variable1_name"] = 'Zone Air System Sensible Cooling Rate'
     #args_hash["variable2_name"] = ''
     #args_hash["variable3_name"] = ''  
 
@@ -122,7 +128,7 @@ class ViewData_Test < MiniTest::Unit::TestCase
     # make sure output requests are in pre-run model, this will happen automatically in PAT
     
     # set up runner, this will happen automatically when measure is run in PAT
-    runner.setLastOpenStudioModelPath(OpenStudio::Path.new(modelPath()))  
+    runner.setLastOpenStudioModel(model)  
     runner.setLastEnergyPlusWorkspacePath(OpenStudio::Path.new(workspacePath()))     
     runner.setLastEnergyPlusSqlFilePath(OpenStudio::Path.new(sqlPath()))    
     
