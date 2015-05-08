@@ -131,6 +131,7 @@ var settings = {
   showWindows: getBoolFromLocalStorage('showWindows', true),
   showDoors: getBoolFromLocalStorage('showDoors', true),
   showShading: getBoolFromLocalStorage('showShading', true),
+  showPartitions: getBoolFromLocalStorage('showPartitions', true),
   showWireframe: getBoolFromLocalStorage('showWireframe', true),
   xView: function() {setAllCameraAngles(0, 0, 1);},
   yView: function() {setAllCameraAngles(-90, 0, 1);},
@@ -932,6 +933,8 @@ var update = function (value) {
       object.visible = false;
     }else if (!settings.showShading && (surfaceType.indexOf('Shading') > -1)){
       object.visible = false;
+    }else if (!settings.showPartitions && (surfaceType == 'InteriorPartitionSurface')){
+      object.visible = false;
     }
 
     var material = null;
@@ -1130,6 +1133,11 @@ document.addEventListener('DOMContentLoaded', function(event) {
     setLocalStorage('showShading', value);
     update(value);
   });
+  f1.add(settings, 'showPartitions').name('Show Partitions').onChange(function(value) {
+    removeSelection();
+    setLocalStorage('showPartitions', value);
+    update(value);
+  });  
   f1.add(settings, 'showWireframe').name('Show Wireframe').onChange(function(value) {
     removeSelection();
     setLocalStorage('showWireframe', value);

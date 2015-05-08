@@ -657,6 +657,144 @@ class VA3C
     return [geometries, user_datas]
   end  
 
+  # turn an interior partition surface into geometries
+  def self.make_interior_partition_geometries(surface)
+    geometries = []
+    user_datas = []
+
+    # get the transformation to site coordinates
+    site_transformation = OpenStudio::Transformation.new
+    planar_surface_group = surface.planarSurfaceGroup
+    if not planar_surface_group.empty?
+      site_transformation = planar_surface_group.get.siteTransformation
+    end
+    interior_partition_surface_group = surface.interiorPartitionSurfaceGroup
+
+    space_name = nil
+    thermal_zone_name = nil
+    space_type_name = nil
+    building_story_name = nil
+    if not interior_partition_surface_group.empty?
+
+      space = interior_partition_surface_group.get.space
+      if space.is_initialized
+        space = space.get
+        space_name = space.name.to_s
+        
+        thermal_zone = space.thermalZone
+        if thermal_zone.is_initialized
+          thermal_zone_name = thermal_zone.get.name.to_s
+        end
+        
+        space_type = space.spaceType
+        if space_type.is_initialized
+          space_type_name = space_type.get.name.to_s
+        end
+        
+        building_story = space.buildingStory
+        if building_story.is_initialized
+          building_story_name = building_story.get.name.to_s
+        end
+      end
+    end
+    
+    # get the vertices
+    surface_vertices = surface.vertices
+    t = OpenStudio::Transformation::alignFace(surface_vertices)
+    r = t.rotationMatrix
+    tInv = t.inverse
+    surface_vertices = OpenStudio::reverse(tInv*surface_vertices)
+
+    # triangulate surface
+    triangles = OpenStudio::computeTriangulation(surface_vertices, OpenStudio::Point3dVectorVector.new)
+    if triangles.empty?
+      puts "Failed to triangulate interior partition surface #{surface.name}"
+      return geometries
+    end
+
+    all_vertices = []
+    face_indices = []
+    triangles.each do |vertices|
+      vertices = site_transformation*t*vertices
+      #normal = site_transformation.rotationMatrix*r*z
+
+      # https://github.com/mrdoob/three.js/wiki/JSON-Model-format-3
+      # 0 indicates triangle
+      # 16 indicates triangle with normals
+      face_indices << 0
+      vertices.reverse_each do |vertex|
+        face_indices << get_vertex_index(vertex, all_vertices)  
+      end
+
+      # convert to 1 based indices
+      #face_indices.each_index {|i| face_indices[i] = face_indices[i] + 1}
+    end
+
+    data = GeometryData.new
+    data.vertices = flatten_vertices(all_vertices)
+    data.normals = [] 
+    data.uvs = []
+    data.faces = face_indices
+    data.scale = 1
+    data.visible = true
+    data.castShadow = true
+    data.receiveShadow = false
+    data.doubleSided = true
+    
+    geometry = Geometry.new
+    geometry.uuid = format_uuid(surface.handle)
+    geometry.type = 'Geometry'
+    geometry.data = data.to_h
+    geometries << geometry.to_h
+    
+    surface_user_data = UserData.new
+    surface_user_data.handle = format_uuid(surface.handle)
+    surface_user_data.name = surface.name.to_s
+    surface_user_data.coincidentWithOutsideObject = false
+    
+    surface_user_data.surfaceType = 'InteriorPartitionSurface'
+    surface_user_data.surfaceTypeMaterialName = 'InteriorPartitionSurface'
+  
+    surface_user_data.outsideBoundaryCondition = nil
+    surface_user_data.outsideBoundaryConditionObjectName = nil
+    surface_user_data.outsideBoundaryConditionObjectHandle = nil
+    surface_user_data.sunExposure = nil
+    surface_user_data.windExposure = nil
+    
+    construction = surface.construction
+    if construction.is_initialized
+      surface_user_data.constructionName = construction.get.name.to_s
+      surface_user_data.constructionMaterialName = 'Construction_' + construction.get.name.to_s
+    end
+    
+    surface_user_data.spaceName = space_name
+    surface_user_data.thermalZoneName = thermal_zone_name
+    if thermal_zone_name
+      surface_user_data.thermalZoneMaterialName = 'ThermalZone_' + thermal_zone_name
+    end
+    surface_user_data.spaceTypeName = space_type_name
+    if space_type_name
+      surface_user_data.spaceTypeMaterialName = 'SpaceType_' + space_type_name
+    end
+    surface_user_data.buildingStoryName = building_story_name
+    if building_story_name
+      surface_user_data.buildingStoryMaterialName = 'BuildingStory_' + building_story_name
+    end
+
+    #vertices = []
+    #surface.vertices.each do |v| 
+    #  vertex = Vertex.new
+    #  vertex.x = v.x
+    #  vertex.y = v.y
+    #  vertex.z = v.z
+    #  vertices << vertex.to_h
+    #end
+    #surface_user_data.vertices = vertices
+    user_datas << surface_user_data.to_h
+
+    return [geometries, user_datas]
+  end  
+  
   def self.identity_matrix
     return [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]
   end
@@ -707,9 +845,7 @@ class VA3C
         scene_child.name = user_data[:name]
         scene_child.type = "Mesh"
         scene_child.geometry = geometry[:uuid]
-        
 
-        
         if i == 0
           # first geometry is base surface
           scene_child.material = material[:uuid]
@@ -746,6 +882,31 @@ class VA3C
           material = space_shading_material
         end
         
+        all_geometries << geometry
+
+        scene_child = SceneChild.new
+        scene_child.uuid = format_uuid(OpenStudio::createUUID) 
+        scene_child.name = user_data[:name]
+        scene_child.type = 'Mesh'
+        scene_child.geometry = geometry[:uuid]
+        scene_child.material = material[:uuid]
+        scene_child.matrix = identity_matrix
+        scene_child.userData = user_data
+        object[:children] << scene_child.to_h
+      end
+      
+    end    
+    
+    # loop over all interior partition surfaces
+    model.getInteriorPartitionSurfaces.each do |surface|
+  
+      geometries, user_datas = make_interior_partition_geometries(surface)
+      geometries.each_index do |i| 
+        geometry = geometries[i]
+        user_data = user_datas[i]
+        
+        material = interior_partition_surface_material
+
         all_geometries << geometry
 
         scene_child = SceneChild.new
