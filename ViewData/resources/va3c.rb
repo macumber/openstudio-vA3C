@@ -44,6 +44,15 @@ class VA3C
       self.thermalZoneMaterialName = 'Undefined' if self.thermalZoneMaterialName.nil?
       self.spaceTypeMaterialName = 'Undefined' if self.spaceTypeMaterialName.nil?
       self.buildingStoryMaterialName = 'Undefined' if self.buildingStoryMaterialName.nil?
+      
+      self.constructionName = '' if self.constructionName.nil?
+      self.spaceName = '' if self.spaceName.nil?
+      self.thermalZoneName = '' if self.thermalZoneName.nil?
+      self.spaceTypeName = '' if self.spaceTypeName.nil?
+      self.buildingStoryName = '' if self.buildingStoryName.nil?
+      self.outsideBoundaryCondition = '' if self.outsideBoundaryCondition.nil?
+      self.outsideBoundaryConditionObjectName = '' if self.outsideBoundaryConditionObjectName.nil?
+      
     end
   end
   Vertex = Struct.new(:x, :y, :z)
@@ -104,7 +113,7 @@ class VA3C
   end
   
   # create a material
-  def self.make_material(name, color, opacity, side)
+  def self.make_material(name, color, opacity, side, shininess=50)
 
     transparent = false
     if opacity < 1
@@ -117,8 +126,8 @@ class VA3C
                 :color => "#{color}".hex,
                 :ambient => "#{color}".hex,
                 :emissive => '0x000000'.hex,
-                :specular => '0x808080'.hex,
-                :shininess => 50,
+                :specular => "#{color}".hex,
+                :shininess => shininess,
                 :opacity => opacity,
                 :transparent => transparent,
                 :wireframe => false,
@@ -130,10 +139,12 @@ class VA3C
   def self.build_materials(model)
     materials = []
     
-    materials << make_material('Undefined', format_color(255, 255, 255), 1, THREE::DoubleSide) 
+    #materials << make_material('Undefined', format_color(255, 255, 255), 1, THREE::DoubleSide) 
+    materials << {:uuid => "#{format_uuid(OpenStudio::createUUID)}", :name => 'Undefined', :type => 'MeshBasicMaterial', :color => '0xffffff'.hex, :side => THREE::DoubleSide}
     
     materials << make_material('NormalMaterial', format_color(255, 255, 255), 1, THREE::DoubleSide) 
-    materials << make_material('NormalMaterial_Ext', format_color(255, 255, 255), 1, THREE::FrontSide) 
+    #materials << make_material('NormalMaterial_Ext', format_color(255, 255, 255), 1, THREE::FrontSide) 
+    materials << {:uuid => "#{format_uuid(OpenStudio::createUUID)}", :name => 'NormalMaterial_Ext', :type => 'MeshBasicMaterial', :color => '0xffffff'.hex, :side => THREE::FrontSide}
     materials << make_material('NormalMaterial_Int', format_color(255, 0, 0), 1, THREE::BackSide) 
     
     # materials from 'openstudio\openstudiocore\ruby\openstudio\sketchup_plugin\lib\interfaces\MaterialsInterface.rb'
@@ -355,12 +366,24 @@ class VA3C
       surface_user_data.outsideBoundaryConditionObjectName = adjacent_surface.get.name.to_s
       surface_user_data.outsideBoundaryConditionObjectHandle = format_uuid(adjacent_surface.get.handle)
       
-      # todo: do this for real
-      surface_user_data.coincidentWithOutsideObject = true
+      other_site_transformation = OpenStudio::Transformation.new
+      other_group = adjacent_surface.get.planarSurfaceGroup
+      if not other_group.empty?
+        other_site_transformation = other_group.get.siteTransformation
+      end
+      
+      other_vertices = other_site_transformation*adjacent_surface.get.vertices
+      if OpenStudio::circularEqual(site_transformation*surface.vertices, OpenStudio::reverse(other_vertices))
+        #puts "adjacent surfaces are coincident"
+        surface_user_data.coincidentWithOutsideObject = true # controls display only, not energy model
+      else
+        #puts "adjacent surfaces are not coincident"
+        surface_user_data.coincidentWithOutsideObject = false # controls display only, not energy model
+      end
+            
     end
     surface_user_data.sunExposure = surface.sunExposure
     surface_user_data.windExposure = surface.windExposure
-    
     
     if surface.outsideBoundaryCondition == 'Outdoors'
       if surface.sunExposure == 'SunExposed' && surface.windExposure == 'WindExposed'
@@ -477,9 +500,21 @@ class VA3C
       if adjacent_sub_surface.is_initialized
         sub_surface_user_data.outsideBoundaryConditionObjectName = adjacent_sub_surface.get.name.to_s
         sub_surface_user_data.outsideBoundaryConditionObjectHandle = format_uuid(adjacent_sub_surface.get.handle)
+      
+        other_site_transformation = OpenStudio::Transformation.new
+        other_group = adjacent_sub_surface.get.planarSurfaceGroup
+        if not other_group.empty?
+          other_site_transformation = other_group.get.siteTransformation
+        end
         
-        # todo: do this for real
-        sub_surface_user_data.coincidentWithOutsideObject = true
+        other_vertices = other_site_transformation*adjacent_sub_surface.get.vertices
+        if OpenStudio::circularEqual(site_transformation*sub_surface.vertices, OpenStudio::reverse(other_vertices))
+          #puts "adjacent sub surfaces are coincident"
+          surface_user_data.coincidentWithOutsideObject = true # controls display only, not energy model
+        else
+          #puts "adjacent sub surfaces are not coincident"
+          surface_user_data.coincidentWithOutsideObject = false # controls display only, not energy model
+        end
       
         sub_surface_user_data.boundaryMaterialName = 'Boundary_Surface'
       else
@@ -619,9 +654,9 @@ class VA3C
     surface_user_data.surfaceType = shading_surface_type + 'Shading'
     surface_user_data.surfaceTypeMaterialName = shading_surface_type + 'Shading'
   
-    surface_user_data.outsideBoundaryCondition = nil
-    surface_user_data.outsideBoundaryConditionObjectName = nil
-    surface_user_data.outsideBoundaryConditionObjectHandle = nil
+    #surface_user_data.outsideBoundaryCondition = nil
+    #surface_user_data.outsideBoundaryConditionObjectName = nil
+    #surface_user_data.outsideBoundaryConditionObjectHandle = nil
     surface_user_data.sunExposure = 'SunExposed'
     surface_user_data.windExposure = 'WindExposed'
     
@@ -631,17 +666,19 @@ class VA3C
       surface_user_data.constructionMaterialName = 'Construction_' + construction.get.name.to_s
     end
     
-    surface_user_data.spaceName = space_name
-    surface_user_data.thermalZoneName = thermal_zone_name
+    if space_name
+      surface_user_data.spaceName = space_name
+    end
     if thermal_zone_name
+      surface_user_data.thermalZoneName = thermal_zone_name
       surface_user_data.thermalZoneMaterialName = 'ThermalZone_' + thermal_zone_name
     end
-    surface_user_data.spaceTypeName = space_type_name
     if space_type_name
+      surface_user_data.spaceTypeName = space_type_name
       surface_user_data.spaceTypeMaterialName = 'SpaceType_' + space_type_name
     end
-    surface_user_data.buildingStoryName = building_story_name
     if building_story_name
+      surface_user_data.buildingStoryName = building_story_name
       surface_user_data.buildingStoryMaterialName = 'BuildingStory_' + building_story_name
     end
 
@@ -757,11 +794,11 @@ class VA3C
     surface_user_data.surfaceType = 'InteriorPartitionSurface'
     surface_user_data.surfaceTypeMaterialName = 'InteriorPartitionSurface'
   
-    surface_user_data.outsideBoundaryCondition = nil
-    surface_user_data.outsideBoundaryConditionObjectName = nil
-    surface_user_data.outsideBoundaryConditionObjectHandle = nil
-    surface_user_data.sunExposure = nil
-    surface_user_data.windExposure = nil
+    #surface_user_data.outsideBoundaryCondition = nil
+    #surface_user_data.outsideBoundaryConditionObjectName = nil
+    #surface_user_data.outsideBoundaryConditionObjectHandle = nil
+    surface_user_data.sunExposure = 'NoSun'
+    surface_user_data.windExposure = 'NoWind'
     
     construction = surface.construction
     if construction.is_initialized
@@ -769,17 +806,19 @@ class VA3C
       surface_user_data.constructionMaterialName = 'Construction_' + construction.get.name.to_s
     end
     
-    surface_user_data.spaceName = space_name
-    surface_user_data.thermalZoneName = thermal_zone_name
+    if space_name
+      surface_user_data.spaceName = space_name
+    end
     if thermal_zone_name
+      surface_user_data.thermalZoneName = thermal_zone_name
       surface_user_data.thermalZoneMaterialName = 'ThermalZone_' + thermal_zone_name
     end
-    surface_user_data.spaceTypeName = space_type_name
     if space_type_name
+      surface_user_data.spaceTypeName = space_type_name
       surface_user_data.spaceTypeMaterialName = 'SpaceType_' + space_type_name
     end
-    surface_user_data.buildingStoryName = building_story_name
     if building_story_name
+      surface_user_data.buildingStoryName = building_story_name
       surface_user_data.buildingStoryMaterialName = 'BuildingStory_' + building_story_name
     end
 

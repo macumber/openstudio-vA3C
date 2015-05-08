@@ -600,7 +600,7 @@ function init() {
     shininess: 50,
     side: THREE.DoubleSide
   });
-
+  
   materials = parseMaterials(os_data.materials);
 
   renderer.domElement.addEventListener('mousedown', onDocumentMouseDown, false);
@@ -729,29 +729,43 @@ function onDocumentMouseClick(event) {
       var txt = 'Name: ' + intersected.userData.name + '<br>';
       switch (settings.renderBy) {
         case "Surface Type":
-          txt += 'Surface Type: ' + intersected.userData.surfaceType + '<br>' +
-                'Space Name: ' + intersected.userData.spaceName;
+          txt += 'Surface Type: ' + intersected.userData.surfaceType + '<br>';
+          if (intersected.userData.spaceName){
+            txt += 'Space Name: ' + intersected.userData.spaceName;
+          }
           break;
         case "Normal":
-          txt += 'Surface Type: ' + intersected.userData.surfaceType + '<br>' +
-                'Space Name: ' + intersected.userData.spaceName;
+          txt += 'Surface Type: ' + intersected.userData.surfaceType + '<br>'
+          if (intersected.userData.spaceName){
+            txt += 'Space Name: ' + intersected.userData.spaceName;
+          }
           break;
         case "Boundary":
-          txt += 'Outside Boundary Condition: ' + intersected.userData.outsideBoundaryCondition + '<br>' +
-                'Sun Exposure: ' + intersected.userData.sunExposure + '<br>' +
-                'Wind Exposure: ' + intersected.userData.windExposure;
+          if (intersected.userData.outsideBoundaryCondition){
+            txt += 'Outside Boundary Condition: ' + intersected.userData.outsideBoundaryCondition + '<br>';
+          }
+          txt += 'Sun Exposure: ' + intersected.userData.sunExposure + '<br>';
+          txt += 'Wind Exposure: ' + intersected.userData.windExposure;
           break;
         case "Construction":
-          txt += 'Construction Name: ' + intersected.userData.constructionName;
+          if (intersected.userData.constructionName){
+            txt += 'Construction Name: ' + intersected.userData.constructionName;
+          }
           break;
         case "Thermal Zone":
-          txt += 'Thermal Zone: ' + intersected.userData.thermalZoneName;
+          if (intersected.userData.thermalZoneName){
+            txt += 'Thermal Zone: ' + intersected.userData.thermalZoneName;
+          }
           break;
         case "Space Type":
-          txt += 'Space Type: ' + intersected.userData.spaceTypeName;
+          if (intersected.userData.spaceTypeName){
+            txt += 'Space Type: ' + intersected.userData.spaceTypeName;
+          }
           break;
         case "Building Story":
-          txt += 'Story Name: ' + intersected.userData.buildingStoryName;
+          if (intersected.userData.buildingStoryName){
+            txt += 'Story Name: ' + intersected.userData.buildingStoryName;
+          }
           break;
         case "Data":
           // in javascript (0 == '' == false)
@@ -987,15 +1001,15 @@ var update = function (value) {
         var object_variables = object.userData.variables.filter(function(x){return x.name == settings.variableName;});
         if (object_variables.length > 0){
           var object_variable = object_variables[0];
-          if (object_variable.valueIndex != null){
+          if (object_variable.valueIndex !== null){
             value = variable.values[object_variable.valueIndex][i];
           }
-          if (object_variable.keyName != null){
+          if (object_variable.keyName !== null){
             keyName = object_variable.keyName;
           }
         }
        
-        if (value != null) {
+        if (value !== null) {
           object.userData.variableName = settings.variableName;
           object.userData.variableDate = date;
           object.userData.variableTime = time;
