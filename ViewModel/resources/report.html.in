@@ -929,6 +929,13 @@ var update = function (value) {
       object.visible = false;
     }else if (!settings.showWindows && surfaceType.indexOf('Window') > -1){
       object.visible = false;
+    }else if (!settings.showWindows && surfaceType.indexOf('GlassDoor') > -1){
+      // hide these with doors
+      //object.visible = false;
+    }else if (!settings.showWindows && surfaceType.indexOf('Skylight') > -1){
+      object.visible = false;
+    }else if (!settings.showWindows && surfaceType.indexOf('TubularDaylight') > -1){
+      object.visible = false;
     }else if (!settings.showDoors && surfaceType.indexOf('Door') > -1){
       object.visible = false;
     }else if (!settings.showShading && (surfaceType.indexOf('Shading') > -1)){

@@ -80,6 +80,7 @@ class VA3C
     model.getBuildingStorys.each do |buildingStory|
       buildingStoryNames << buildingStory.name.to_s
     end
+    buildingStoryNames.sort! {|x,y| x.upcase <=> y.upcase} # case insensitive sort
     
     # build up the json hash
     result = Hash.new
@@ -464,7 +465,8 @@ class VA3C
       sub_surface_user_data.coincidentWithOutsideObject = false
       
       sub_surface_user_data.surfaceType = sub_surface.subSurfaceType
-      if /Window/.match(sub_surface.subSurfaceType) || /Glass/.match(sub_surface.subSurfaceType) 
+      if /Window/.match(sub_surface.subSurfaceType) || /Glass/.match(sub_surface.subSurfaceType) || 
+         /Skylight/.match(sub_surface.subSurfaceType) || /TubularDaylight/.match(sub_surface.subSurfaceType) 
         sub_surface_user_data.surfaceTypeMaterialName = 'Window'
       else
         sub_surface_user_data.surfaceTypeMaterialName = 'Door'
