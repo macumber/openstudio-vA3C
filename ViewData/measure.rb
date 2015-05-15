@@ -205,12 +205,17 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
       return false
     end
     runner.registerInfo("Gathering results for run period '#{env_period}'")
-    
+
+    start_time = Time.now
+    puts "printing variables"
     # print all variables for reference
     sqlFile.availableVariableNames(env_period, reporting_frequency).each do |variable|
       runner.registerInfo("Available variable name '#{variable}'")
     end
+    puts "done printing variables, elapsed time #{Time.now-start_time}"
     
+    start_time = Time.now
+    puts "computing surface_data"
     # list surface and thermal zone name for each surface
     # surface_data is a temporary variable, it is not written to JSON
     surface_data = []
@@ -230,6 +235,7 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
 
       surface_data << {:surface_name => surface_name, :thermal_zone_name => thermal_zone_name, :variables => []}
     end
+    puts "done computing surface_data, elapsed time #{Time.now-start_time}"
    
     # same across all variables for given timestep
     times = nil
@@ -239,6 +245,7 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
     numDays = nil
     
     # changes for each variable
+    start_time = Time.now
     meta_variables = []
     variables = []
     variable_names.each do |variable_name|
@@ -246,7 +253,9 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
       values = []
       data_range = [Float::MAX, Float::MIN] # data max, data min
       
+      puts "getting keys for variable, #{variable_name}"
       keys = sqlFile.availableKeyValues(env_period, reporting_frequency, variable_name)
+      puts "done getting #{keys.size} keys, elapsed time #{Time.now-start_time}"
       
       if keys.empty?
         runner.registerWarning("No data available for variable '#{variable_name}', skipping")
@@ -256,8 +265,10 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
       keys.each do |key|
         runner.registerInfo("Available key '#{key}' for variable name '#{variable_name}'")
         
+        puts "getting timeseries for key, #{key}"
         ts = sqlFile.timeSeries(env_period, reporting_frequency, variable_name, key).get
         units = ts.units 
+        puts "done getting timeseries, elapsed time #{Time.now-start_time}"
         
         if times.nil?
           times = datetimes_to_array(ts.dateTimes)
@@ -292,6 +303,8 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
             end
           end
         end
+        
+        puts "finished with key #{key}, elapsed time #{Time.now-start_time}"
       end
       
       meta_variables << {:name=>variable_name, :intervalsPerHour=>intervalsPerHour, :intervalsPerDay=>intervalsPerDay, 
@@ -301,11 +314,15 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
       variables << {:name=>variable_name, :intervalsPerHour=>intervalsPerHour, :intervalsPerDay=>intervalsPerDay, 
                     :hoursPerInterval=>hoursPerInterval, :numDays=>numDays, :units=>units, 
                     :valueMin=>data_range[0], :valueMax=>data_range[1], :timeIndex=>0, :values=>values}
-                         
+      
+      puts "finished with variable #{variable_name}, elapsed time #{Time.now-start_time}"
     end
     
     # convert the model to vA3C JSON format
+    start_time = Time.now
+    puts "converting model to vA3C"
     json = VA3C.convert_model(model)
+    puts "finished converting model, elapsed time #{Time.now-start_time}"
     
     json['metadata'][:variables] = meta_variables
     json[:times] = [times]
@@ -325,6 +342,8 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
     end
 
     # write json file
+    start_time = Time.now
+    puts "writing JSON"
     json_out_path = "./report.json"
     File.open(json_out_path, 'w') do |file|
       file << JSON::generate(json, {:object_nl=>"\n", :array_nl=>"", :indent=>"  "})
@@ -336,8 +355,11 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
         file.flush
       end
     end
+    puts "finished writing JSON, elapsed time #{Time.now-start_time}"
     
     # read in template
+    start_time = Time.now
+    puts "writing html"
     html_in_path = "#{File.dirname(__FILE__)}/resources/report.html.in"
     if File.exist?(html_in_path)
         html_in_path = html_in_path
@@ -367,6 +389,7 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
         file.flush
       end
     end
+    puts "finished writing html, elapsed time #{Time.now-start_time}"
     
     #closing the sql file
     #sqlFile.close()
