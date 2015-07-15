@@ -129,6 +129,11 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
     variable2_name = runner.getStringArgumentValue('variable2_name',user_arguments)
     variable3_name = runner.getStringArgumentValue('variable3_name',user_arguments)
     
+    # 'Timestep' is the key in the input file, 'Zone Timestep' is the key in the SqlFile
+    if reporting_frequency == "Timestep"
+      reporting_frequency = "Zone Timestep"
+    end
+    
     variable_names = []
     
     if /Zone/.match(variable1_name) || /Surface/.match(variable1_name) 
