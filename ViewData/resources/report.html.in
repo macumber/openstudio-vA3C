@@ -1104,8 +1104,7 @@ var updateVariable = function (variableName) {
   update();
 };
 
-document.addEventListener('DOMContentLoaded', function(event) {
-
+var initDatGui = function () {
   var has_data = (os_data.metadata.variables && os_data.metadata.variables.length);
 
   dat.GUI.prototype.removeFolder = function(name) {
@@ -1198,7 +1197,14 @@ document.addEventListener('DOMContentLoaded', function(event) {
   f2.open();*/
 
   update();
+};
+
+// comment out to deploy in app
+document.addEventListener('DOMContentLoaded', function(event) {
+  initDatGui();
 });
+
+
 </script>
 </body>
 </html>

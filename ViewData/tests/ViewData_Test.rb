@@ -44,9 +44,6 @@ class ViewData_Test < MiniTest::Unit::TestCase
     if !File.exist?(sqlPath())
       puts "Running EnergyPlus"
       
-      co = OpenStudio::Runmanager::ConfigOptions.new(true)
-      co.findTools(false, true, false, true)
-      
       vt = OpenStudio::OSVersion::VersionTranslator.new
       model = vt.loadModel(modelPath())
       assert(model.is_initialized)
@@ -79,14 +76,51 @@ class ViewData_Test < MiniTest::Unit::TestCase
       var.setReportingFrequency('Timestep')
       
       model.save(OpenStudio::Path.new(runDir() + '/in.osm'), true)
+      
+      use_runmanager = true
+      
+      begin
+        workflow = OpenStudio::WorkflowJSON.new
+        use_runmanager = false
+      rescue LoadError
+        use_runmanager = true
+      end
 
-      wf = OpenStudio::Runmanager::Workflow.new("modeltoidf->energypluspreprocess->energyplus")
-      wf.add(co.getTools())
-      job = wf.create(OpenStudio::Path.new(runDir()), OpenStudio::Path.new(runDir() + '/in.osm'), OpenStudio::Path.new(epwPath()))
-    
-      rm = OpenStudio::Runmanager::RunManager.new
-      rm.enqueue(job, true)
-      rm.waitForFinished
+      sql_path = nil
+      if use_runmanager == true
+        
+        co = OpenStudio::Runmanager::ConfigOptions.new(true)
+        co.findTools(false, true, false, true)
+        
+        wf = OpenStudio::Runmanager::Workflow.new("modeltoidf->energypluspreprocess->energyplus")
+        wf.add(co.getTools())
+        job = wf.create(OpenStudio::Path.new(runDir()), OpenStudio::Path.new(runDir() + '/in.osm'), OpenStudio::Path.new(epwPath()))
+      
+        rm = OpenStudio::Runmanager::RunManager.new
+        rm.enqueue(job, true)
+        rm.waitForFinished
+
+      else 
+
+        osw_path = File.absolute_path(runDir() + '/in.osw')
+        
+        workflow.setSeedFile(File.absolute_path(runDir() + '/in.osm'))
+        workflow.setWeatherFile(File.absolute_path(epwPath()))
+        workflow.saveAs(osw_path)
+
+        cli_path = OpenStudio.getOpenStudioCLI
+        cmd = "\"#{cli_path}\" run -w \"#{osw_path}\""
+        puts cmd
+        system(cmd)
+        
+        FileUtils.mkdir_p(File.dirname(workspacePath()))
+        FileUtils.cp(File.absolute_path(runDir() + '/run/in.idf'), workspacePath())
+
+        FileUtils.mkdir_p(File.dirname(sqlPath()))
+        FileUtils.cp(File.absolute_path(runDir() + '/run/eplusout.sql'), sqlPath())
+
+      end
+
     end
   end
 
