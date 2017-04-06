@@ -2,8 +2,8 @@
   <schema_version>3.0</schema_version>
   <name>view_data</name>
   <uid>18cf0de7-48b8-48dc-ab68-0dd29f0b8bd0</uid>
-  <version_id>9b5248b8-8d76-4769-a0b5-797046560c19</version_id>
-  <version_modified>20160321T212509Z</version_modified>
+  <version_id>e982ee41-a746-4c36-8e67-a9038c2e3e99</version_id>
+  <version_modified>20170320T155841Z</version_modified>
   <xml_checksum>2C8A3EEF</xml_checksum>
   <class_name>ViewData</class_name>
   <display_name>ViewData</display_name>
@@ -71,6 +71,7 @@
       <default_value>Zone Mean Radiant Temperature</default_value>
     </argument>
   </arguments>
+  <outputs/>
   <provenances/>
   <tags>
     <tag>Reporting.QAQC</tag>
@@ -107,12 +108,6 @@
       <checksum>1B6496DE</checksum>
     </file>
     <file>
-      <filename>va3c.rb</filename>
-      <filetype>rb</filetype>
-      <usage_type>resource</usage_type>
-      <checksum>254BCDED</checksum>
-    </file>
-    <file>
       <filename>ViewData_Test.rb</filename>
       <filetype>rb</filetype>
       <usage_type>test</usage_type>
@@ -134,6 +129,12 @@
       <filetype>in</filetype>
       <usage_type>resource</usage_type>
       <checksum>64866EE7</checksum>
+    </file>
+    <file>
+      <filename>va3c.rb</filename>
+      <filetype>rb</filetype>
+      <usage_type>resource</usage_type>
+      <checksum>B379913D</checksum>
     </file>
   </files>
 </measure>

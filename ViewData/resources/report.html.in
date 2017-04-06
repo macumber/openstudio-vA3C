@@ -62,7 +62,12 @@
 </style>
 <script>
 
-var os_data = <%=os_data %>;
+// global variable, set in init
+var os_data;
+
+// configured variable, remove for deployed version with app
+var os_data_const = <%=os_data %>;
+
 var renderer, scene, light, scene_objects, scene_edges, object_edges, coincident_objects, back_objects;
 var perspectiveCamera, orthographicCamera, perspectiveControls, orthographicControls;
 var project, materials, variable;
@@ -277,7 +282,8 @@ function drop(ev) {
   setLocalStorage('colorBarLeft', parseInt(style.left));
 }
 
-init();
+// remove call to init and animate when deploying with app
+init(os_data_const);
 animate();
 
 function parseMaterials(json) {
@@ -414,7 +420,10 @@ function setCameraAngles(camera, controls, theta, phi, tweenTime) {
   });
 }
 
-function init() {
+function init(os_data_in) {
+  
+  // set global variable
+  os_data = os_data_in;
 
   var css = document.head.appendChild(document.createElement('style'));
   css.innerHTML = 'body { font:600 12pt monospace; margin:0; overflow:hidden; }';
