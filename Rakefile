@@ -17,7 +17,7 @@ task :build do
         url = md[1].gsub('https', 'http')
         request = RestClient::Resource.new(url)
         response = request.get
-        line = "<script>#{response.gsub('\n','')}</script>\n"
+        line = "<script>#{response}</script>\n"
       end
       
       in_file += line
