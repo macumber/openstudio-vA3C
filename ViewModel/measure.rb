@@ -39,7 +39,7 @@ class ViewModel < OpenStudio::Ruleset::ModelUserScript
     end
 
     # convert the model to vA3C JSON format
-    json = VA3C.convert_model(model)
+    json = VA3C.convert_model(model.clone.to_Model)
 
     # write json file
     json_out_path = "./report.json"
