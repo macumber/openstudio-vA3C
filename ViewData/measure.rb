@@ -326,7 +326,18 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
     # convert the model to vA3C JSON format
     start_time = Time.now
     #puts "converting model to vA3C"
-    json = VA3C.convert_model(model)
+    json = nil
+    model_clone = model.clone(true).to_Model
+    begin 
+      # try to use new implementation
+      three_scene = OpenStudio::Model::modelToThreeJS(model_clone, true)
+      json = JSON::parse(three_scene.toJSON(false), {:symbolize_names=>true})
+      runner.registerFinalCondition("Used new ThreeScene translator.")
+    rescue NameError, StandardError
+      # use old Ruby implementation
+      runner.registerFinalCondition("Using Ruby VA3C translator.")
+      json = VA3C.convert_model(model_clone)
+    end
     #puts "finished converting model, elapsed time #{Time.now-start_time}"
     
     json['metadata'][:variables] = meta_variables
