@@ -45,10 +45,10 @@ class ViewModel < OpenStudio::Ruleset::ModelUserScript
       # try to use new implementation
       three_scene = OpenStudio::Model::modelToThreeJS(model_clone, true)
       json = JSON::parse(three_scene.toJSON(false), {:symbolize_names=>true})
-      runner.registerFinalCondition("Used new ThreeScene translator.")
+      runner.registerInfo("Used new ThreeScene translator.")
     rescue NameError, StandardError
       # use old Ruby implementation
-      runner.registerFinalCondition("Using Ruby VA3C translator.")
+      runner.registerInfo("Using Ruby VA3C translator.")
       json = VA3C.convert_model(model_clone)
     end
     

@@ -14,6 +14,7 @@ class ViewModel_Test < MiniTest::Unit::TestCase
   def modelPath
     #return "#{File.dirname(__FILE__)}/SimpleModel.osm"
     return "#{File.dirname(__FILE__)}/ExampleModel.osm"
+    #return "#{File.dirname(__FILE__)}/RotationTest.osm"
   end
 
   def reportPath

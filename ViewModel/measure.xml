@@ -2,8 +2,8 @@
   <schema_version>3.0</schema_version>
   <name>view_model</name>
   <uid>f4669f10-fda5-489d-8e1c-7ca3c2d40378</uid>
-  <version_id>bd64b522-f949-4210-ac7d-73a75ee27763</version_id>
-  <version_modified>20170428T221620Z</version_modified>
+  <version_id>abfb7812-07cf-4db3-a84f-747628db60c6</version_id>
+  <version_modified>20170613T222455Z</version_modified>
   <xml_checksum>1E1F8B97</xml_checksum>
   <class_name>ViewModel</class_name>
   <display_name>ViewModel</display_name>
@@ -41,16 +41,16 @@
       <checksum>10636DB9</checksum>
     </file>
     <file>
+      <filename>report.html.in</filename>
+      <filetype>in</filetype>
+      <usage_type>resource</usage_type>
+      <checksum>43F952DA</checksum>
+    </file>
+    <file>
       <filename>ViewModel_Test.rb</filename>
       <filetype>rb</filetype>
       <usage_type>test</usage_type>
-      <checksum>705A2705</checksum>
-    </file>
-    <file>
-      <filename>va3c.rb</filename>
-      <filetype>rb</filetype>
-      <usage_type>resource</usage_type>
-      <checksum>B379913D</checksum>
+      <checksum>D27B86CD</checksum>
     </file>
     <file>
       <version>
@@ -61,13 +61,19 @@
       <filename>measure.rb</filename>
       <filetype>rb</filetype>
       <usage_type>script</usage_type>
-      <checksum>BC19C021</checksum>
+      <checksum>BF369647</checksum>
     </file>
     <file>
-      <filename>report.html.in</filename>
-      <filetype>in</filetype>
+      <filename>RotationTest.osm</filename>
+      <filetype>osm</filetype>
+      <usage_type>test</usage_type>
+      <checksum>B313B958</checksum>
+    </file>
+    <file>
+      <filename>va3c.rb</filename>
+      <filetype>rb</filetype>
       <usage_type>resource</usage_type>
-      <checksum>43F952DA</checksum>
+      <checksum>7D88E2E1</checksum>
     </file>
   </files>
 </measure>
