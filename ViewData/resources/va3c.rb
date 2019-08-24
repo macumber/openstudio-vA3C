@@ -62,6 +62,8 @@ class VA3C
   def self.convert_model(model)
     scene = build_scene(model)
     
+    northAxis = -model.getBuilding.northAxis
+    
     boundingBox = OpenStudio::BoundingBox.new
     boundingBox.addPoint(OpenStudio::Point3d.new(0, 0, 0))
     boundingBox.addPoint(OpenStudio::Point3d.new(1, 1, 1))
@@ -94,7 +96,8 @@ class VA3C
     # build up the json hash
     result = Hash.new
     result['metadata'] = { 'version' => 4.3, 'type' => 'Object', 'generator' => 'OpenStudio', 
-                           'buildingStoryNames' => buildingStoryNames, 'boundingBox' => boundingBoxHash}
+                           'buildingStoryNames' => buildingStoryNames, 'boundingBox' => boundingBoxHash, 
+                           'northAxis' => northAxis}
     result['geometries'] = scene.geometries
     result['materials'] = scene.materials
     result['object'] = scene.object

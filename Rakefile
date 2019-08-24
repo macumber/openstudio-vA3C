@@ -1,5 +1,5 @@
-require 'bundler'
-Bundler.setup
+#require 'bundler'
+#Bundler.setup
 
 require 'rake'
 require 'rest-client'

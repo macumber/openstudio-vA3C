@@ -43,7 +43,8 @@ class ViewModel < OpenStudio::Ruleset::ModelUserScript
     model_clone = model.clone(true).to_Model
     begin 
       # try to use new implementation
-      three_scene = OpenStudio::Model::modelToThreeJS(model_clone, true)
+      ft = OpenStudio::Model::ThreeJSForwardTranslator.new
+      three_scene = ft.modelToThreeJS(model_clone, true)
       json = JSON::parse(three_scene.toJSON(false), {:symbolize_names=>true})
       runner.registerInfo("Used new ThreeScene translator.")
     rescue NameError, StandardError

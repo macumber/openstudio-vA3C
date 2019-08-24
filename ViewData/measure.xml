@@ -2,8 +2,8 @@
   <schema_version>3.0</schema_version>
   <name>view_data</name>
   <uid>18cf0de7-48b8-48dc-ab68-0dd29f0b8bd0</uid>
-  <version_id>835d0c71-3a53-4458-b0de-49e31a843bdf</version_id>
-  <version_modified>20170613T222455Z</version_modified>
+  <version_id>6ad1aae4-c89f-4bb8-98e8-803f1917d21c</version_id>
+  <version_modified>20190824T213203Z</version_modified>
   <xml_checksum>2C8A3EEF</xml_checksum>
   <class_name>ViewData</class_name>
   <display_name>ViewData</display_name>
@@ -114,10 +114,16 @@
       <checksum>EA9EEFB9</checksum>
     </file>
     <file>
+      <filename>va3c.rb</filename>
+      <filetype>rb</filetype>
+      <usage_type>resource</usage_type>
+      <checksum>7557DEA6</checksum>
+    </file>
+    <file>
       <filename>report.html.in</filename>
       <filetype>in</filetype>
       <usage_type>resource</usage_type>
-      <checksum>43F952DA</checksum>
+      <checksum>61B6B47E</checksum>
     </file>
     <file>
       <version>
@@ -128,13 +134,7 @@
       <filename>measure.rb</filename>
       <filetype>rb</filetype>
       <usage_type>script</usage_type>
-      <checksum>9A182EDB</checksum>
-    </file>
-    <file>
-      <filename>va3c.rb</filename>
-      <filetype>rb</filetype>
-      <usage_type>resource</usage_type>
-      <checksum>7D88E2E1</checksum>
+      <checksum>F4A6F83E</checksum>
     </file>
   </files>
 </measure>

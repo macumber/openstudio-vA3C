@@ -2,8 +2,8 @@
   <schema_version>3.0</schema_version>
   <name>view_model</name>
   <uid>f4669f10-fda5-489d-8e1c-7ca3c2d40378</uid>
-  <version_id>abfb7812-07cf-4db3-a84f-747628db60c6</version_id>
-  <version_modified>20170613T222455Z</version_modified>
+  <version_id>1b2e09f3-cd7a-4857-94cf-408ee5df58a0</version_id>
+  <version_modified>20190824T180201Z</version_modified>
   <xml_checksum>1E1F8B97</xml_checksum>
   <class_name>ViewModel</class_name>
   <display_name>ViewModel</display_name>
@@ -41,16 +41,28 @@
       <checksum>10636DB9</checksum>
     </file>
     <file>
-      <filename>report.html.in</filename>
-      <filetype>in</filetype>
-      <usage_type>resource</usage_type>
-      <checksum>43F952DA</checksum>
-    </file>
-    <file>
       <filename>ViewModel_Test.rb</filename>
       <filetype>rb</filetype>
       <usage_type>test</usage_type>
       <checksum>D27B86CD</checksum>
+    </file>
+    <file>
+      <filename>va3c.rb</filename>
+      <filetype>rb</filetype>
+      <usage_type>resource</usage_type>
+      <checksum>7557DEA6</checksum>
+    </file>
+    <file>
+      <filename>report.html.in</filename>
+      <filetype>in</filetype>
+      <usage_type>resource</usage_type>
+      <checksum>61B6B47E</checksum>
+    </file>
+    <file>
+      <filename>RotationTest.osm</filename>
+      <filetype>osm</filetype>
+      <usage_type>test</usage_type>
+      <checksum>B313B958</checksum>
     </file>
     <file>
       <version>
@@ -61,19 +73,7 @@
       <filename>measure.rb</filename>
       <filetype>rb</filetype>
       <usage_type>script</usage_type>
-      <checksum>BF369647</checksum>
-    </file>
-    <file>
-      <filename>RotationTest.osm</filename>
-      <filetype>osm</filetype>
-      <usage_type>test</usage_type>
-      <checksum>B313B958</checksum>
-    </file>
-    <file>
-      <filename>va3c.rb</filename>
-      <filetype>rb</filetype>
-      <usage_type>resource</usage_type>
-      <checksum>7D88E2E1</checksum>
+      <checksum>CD1AD835</checksum>
     </file>
   </files>
 </measure>
