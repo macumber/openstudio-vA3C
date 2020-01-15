@@ -135,8 +135,13 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
     end
     
     variable_names = []
-    
-    if /Zone/.match(variable1_name) || /Surface/.match(variable1_name) 
+
+    # todo - update all three variables to take air loop
+    # I specifically want to use Cooling Coil Electric Power (W) from air loop coil and map it to thermal zones on the air loop
+    # or Air System Cooling Coil Total Cooling Energy (J)
+    # or Air System DX Cooling Coil Electric Energy (J) this has a Heating one paired with it or heat pump?
+
+    if /Zone/.match(variable1_name) || /Surface/.match(variable1_name) || /Air System/.match(variable1_name)
       variable_names << variable1_name
     else
       if !variable1_name.empty?
@@ -146,7 +151,7 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
     
     if variable_names.include?(variable2_name)
       runner.registerWarning("Variable '#{variable2_name}' already requested, skipping")
-    elsif /Zone/.match(variable2_name) || /Surface/.match(variable2_name) 
+    elsif /Zone/.match(variable2_name) || /Surface/.match(variable2_name) || /Air System/.match(variable1_name)
       variable_names << variable2_name
     else
       if !variable2_name.empty?
@@ -156,7 +161,7 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
     
     if variable_names.include?(variable3_name)
       runner.registerWarning("Variable '#{variable3_name}' already requested, skipping")
-    elsif /Zone/.match(variable3_name) || /Surface/.match(variable3_name) 
+    elsif /Zone/.match(variable3_name) || /Surface/.match(variable3_name) || /Air System/.match(variable1_name)
       variable_names << variable3_name
     else
       if !variable3_name.empty?
@@ -227,6 +232,7 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
     model.getPlanarSurfaces.each do |surface|
       surface_name = surface.name.to_s.upcase
       thermal_zone_name = nil
+      air_loop_name = nil # intended when zones do not have more than one air loop
       if (space = surface.space) && !space.empty?
         if from_idf
           # if we translated from IDF, the space name will be the E+ zone name
@@ -234,11 +240,15 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
         else
           if (thermal_zone = space.get.thermalZone) && !thermal_zone.empty?
             thermal_zone_name = thermal_zone.get.name.to_s.upcase
+            # or should I use this (should I use thermal_zone.get.airLoopHVACs.size > 0)
+            if !thermal_zone.get.airLoopHVAC.empty?
+              air_loop_name = thermal_zone.get.airLoopHVAC.get.name.to_s.upcase
+            end
           end
         end
       end
 
-      surface_data << {:surface_name => surface_name, :thermal_zone_name => thermal_zone_name, :variables => []}
+      surface_data << {:surface_name => surface_name, :thermal_zone_name => thermal_zone_name, :air_loop_name => air_loop_name, :variables => []}
     end
     #puts "done computing surface_data, elapsed time #{Time.now-start_time}"
    
@@ -272,14 +282,14 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
         
         #puts "getting timeseries for key, #{key}"
         ts = sqlFile.timeSeries(env_period, reporting_frequency, variable_name, key).get
-        units = ts.units 
+        units = ts.units
         #puts "done getting timeseries, elapsed time #{Time.now-start_time}"
         
         if times.nil?
           times = datetimes_to_array(ts.dateTimes)
           if !ts.intervalLength.empty?
             hoursPerInterval = ts.intervalLength.get.totalHours
-            intervalsPerHour = 1.0 / hoursPerInterval.to_f
+            intervalsPerHour = 60.0 / hoursPerInterval.to_f
             intervalsPerDay = 1.0 / ts.intervalLength.get.totalDays
             numDays = times.size * ts.intervalLength.get.totalDays
           end
@@ -299,11 +309,15 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
         valueIndex = values.length
         values << format_array(this_values)
 
+        # todo - test this with air loop
         if i = surface_data.index{|s| s[:surface_name] == key}
           surface_data[i][:variables] << {:name => variable_name, :valueIndex => valueIndex, :keyName=>key}
         else  
           surface_data.each do |s|
             if s[:thermal_zone_name] == key
+              s[:variables] << {:name => variable_name, :valueIndex => valueIndex, :keyName=>key}
+            end
+            if s[:air_loop_name] == key
               s[:variables] << {:name => variable_name, :valueIndex => valueIndex, :keyName=>key}
             end
           end

@@ -852,7 +852,7 @@ var updateColorBar = function() {
 };
 function cycleHour() {
   if (settings.cycleHour) {
-    settings.hourSlider = settings.hourSlider % 24 + 1;
+    settings.hourSlider = settings.hourSlider % 24 + 1.0/60.0;
     update();
     setTimeout(cycleHour, 1000 / settings.cycleSpeed);
   }
@@ -895,7 +895,7 @@ var update = function (value) {
         cycleHour();
       }
     });
-    dataFolder.add(settings, 'cycleSpeed', 1, 10).name('Cycle Speed').onChange(function(value) {
+    dataFolder.add(settings, 'cycleSpeed', 1, 1000).name('Cycle Speed').onChange(function(value) {
       setLocalStorage('cycleSpeed', value);
     });
     dataFolder.open();
@@ -916,7 +916,7 @@ var update = function (value) {
   var time = '';
   var units = '';
   if (isData && variable){
-    i = Math.floor(variable.intervalsPerDay*Math.floor(settings.daySlider) + variable.intervalsPerHour*Math.floor(settings.hourSlider)) - 1;
+    i = Math.floor(variable.intervalsPerDay*Math.floor(settings.daySlider) + variable.intervalsPerHour*settings.hourSlider/60.0) - 1;
     t = os_data.times[variable.timeIndex][i];
     var d = new Date(0); // The 0 there is the key, which sets the date to the epoch
     d.setUTCSeconds(t);
