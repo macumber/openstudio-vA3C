@@ -20,7 +20,7 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
 
   # human readable description of modeling approach
   def modeler_description
-    return "Converts the OpenStudio model to vA3C JSON format and renders using Three.js, simulation data is applied to surfaces of the model"
+    return "Converts the OpenStudio model to vA3C JSON format and renders using Three.js, simulation data is applied to surfaces of the model. The specified variables should be for surface, thermal zone, or air system variables."
   end
   
   def energyPlusOutputRequests(runner, user_arguments)
