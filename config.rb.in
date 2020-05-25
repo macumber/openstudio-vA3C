@@ -1,0 +1,2 @@
+# location of openstudio CLI
+$OPENSTUDIO_EXE = 'C:/openstudio-2.1.0/bin/openstudio.exe'

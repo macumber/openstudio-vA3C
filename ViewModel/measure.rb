@@ -39,8 +39,20 @@ class ViewModel < OpenStudio::Ruleset::ModelUserScript
     end
 
     # convert the model to vA3C JSON format
-    json = VA3C.convert_model(model)
-
+    json = nil
+    model_clone = model.clone(true).to_Model
+    begin 
+      # try to use new implementation
+      ft = OpenStudio::Model::ThreeJSForwardTranslator.new
+      three_scene = ft.modelToThreeJS(model_clone, true)
+      json = JSON::parse(three_scene.toJSON(false), {:symbolize_names=>true})
+      runner.registerInfo("Used new ThreeScene translator.")
+    rescue NameError, StandardError
+      # use old Ruby implementation
+      runner.registerInfo("Using Ruby VA3C translator.")
+      json = VA3C.convert_model(model_clone)
+    end
+    
     # write json file
     json_out_path = "./report.json"
     File.open(json_out_path, 'w') do |file|

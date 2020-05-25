@@ -62,6 +62,8 @@ class VA3C
   def self.convert_model(model)
     scene = build_scene(model)
     
+    northAxis = -model.getBuilding.northAxis
+    
     boundingBox = OpenStudio::BoundingBox.new
     boundingBox.addPoint(OpenStudio::Point3d.new(0, 0, 0))
     boundingBox.addPoint(OpenStudio::Point3d.new(1, 1, 1))
@@ -94,7 +96,8 @@ class VA3C
     # build up the json hash
     result = Hash.new
     result['metadata'] = { 'version' => 4.3, 'type' => 'Object', 'generator' => 'OpenStudio', 
-                           'buildingStoryNames' => buildingStoryNames, 'boundingBox' => boundingBoxHash}
+                           'buildingStoryNames' => buildingStoryNames, 'boundingBox' => boundingBoxHash, 
+                           'northAxis' => northAxis}
     result['geometries'] = scene.geometries
     result['materials'] = scene.materials
     result['object'] = scene.object
@@ -292,11 +295,15 @@ class VA3C
 
     # get the transformation to site coordinates
     site_transformation = OpenStudio::Transformation.new
-    planar_surface_group = surface.planarSurfaceGroup
-    if not planar_surface_group.empty?
-      site_transformation = planar_surface_group.get.siteTransformation
+    building = surface.model.getBuilding
+    
+    space = surface.space
+    if space.is_initialized
+      site_transformation = building.transformation*space.get.transformation
+    else
+      site_transformation = building.transformation
     end
-
+    
     # get the vertices
     surface_vertices = surface.vertices
     t = OpenStudio::Transformation::alignFace(surface_vertices)
@@ -367,9 +374,11 @@ class VA3C
       surface_user_data.outsideBoundaryConditionObjectHandle = format_uuid(adjacent_surface.get.handle)
       
       other_site_transformation = OpenStudio::Transformation.new
-      other_group = adjacent_surface.get.planarSurfaceGroup
-      if not other_group.empty?
-        other_site_transformation = other_group.get.siteTransformation
+      other_space = adjacent_surface.get.space
+      if not other_space.empty?
+        other_site_transformation = building.transformation*other_space.get.transformation
+      else
+        other_site_transformation = building.transformation
       end
       
       other_vertices = other_site_transformation*adjacent_surface.get.vertices
@@ -502,9 +511,11 @@ class VA3C
         sub_surface_user_data.outsideBoundaryConditionObjectHandle = format_uuid(adjacent_sub_surface.get.handle)
       
         other_site_transformation = OpenStudio::Transformation.new
-        other_group = adjacent_sub_surface.get.planarSurfaceGroup
-        if not other_group.empty?
-          other_site_transformation = other_group.get.siteTransformation
+        other_space = adjacent_sub_surface.get.space
+        if not other_space.empty?
+          other_site_transformation = building.transformation*other_space.get.transformation
+        else
+          other_site_transformation = building.transformation
         end
         
         other_vertices = other_site_transformation*adjacent_sub_surface.get.vertices
@@ -562,10 +573,8 @@ class VA3C
 
     # get the transformation to site coordinates
     site_transformation = OpenStudio::Transformation.new
-    planar_surface_group = surface.planarSurfaceGroup
-    if not planar_surface_group.empty?
-      site_transformation = planar_surface_group.get.siteTransformation
-    end
+    building = surface.model.getBuilding
+    
     shading_surface_group = surface.shadingSurfaceGroup
     shading_surface_type = 'Building'
     space_name = nil
@@ -594,7 +603,15 @@ class VA3C
         if building_story.is_initialized
           building_story_name = building_story.get.name.to_s
         end
+        
+        site_transformation = building.transformation*space.transformation*shading_surface_group.get.transformation
+      elsif /Site/i.match(shading_surface_type)
+        site_transformation = shading_surface_group.get.transformation
+      else
+        site_transformation = building.transformation*shading_surface_group.get.transformation
       end
+      
+      
     end
     
     # get the vertices
@@ -703,10 +720,7 @@ class VA3C
 
     # get the transformation to site coordinates
     site_transformation = OpenStudio::Transformation.new
-    planar_surface_group = surface.planarSurfaceGroup
-    if not planar_surface_group.empty?
-      site_transformation = planar_surface_group.get.siteTransformation
-    end
+    building = surface.model.getBuilding
     interior_partition_surface_group = surface.interiorPartitionSurfaceGroup
 
     space_name = nil
@@ -734,6 +748,10 @@ class VA3C
         if building_story.is_initialized
           building_story_name = building_story.get.name.to_s
         end
+        
+        site_transformation = building.transformation*space.transformation*interior_partition_surface_group.get.transformation
+      else
+        site_transformation = building.transformation*interior_partition_surface_group.get.transformation
       end
     end
     
