@@ -153,7 +153,7 @@ class ViewData_Test < MiniTest::Unit::TestCase
     runner = OpenStudio::Ruleset::OSRunner.new
     
     # get arguments and test that they are what we are expecting
-    arguments = measure.arguments()
+    arguments = measure.arguments(model)
     assert_equal(5, arguments.size)
   
     # create hash of argument values
@@ -229,7 +229,7 @@ class ViewData_Test < MiniTest::Unit::TestCase
     runner = OpenStudio::Ruleset::OSRunner.new
     
     # get arguments and test that they are what we are expecting
-    arguments = measure.arguments()
+    arguments = measure.arguments(model)
     assert_equal(5, arguments.size)
   
     # create hash of argument values
