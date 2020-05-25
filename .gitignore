@@ -1,3 +1,6 @@
 output
 .DS_Store
 config.rb
+Gemfile.lock
+ViewData.zip
+ViewModel.zip

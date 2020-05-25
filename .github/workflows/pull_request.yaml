@@ -21,7 +21,8 @@ jobs:
         docker exec -t test ls
         docker exec -t test which openstudio
         docker exec -t test openstudio openstudio_version
-        docker exec -t test rake
+        docker exec -t test bundle update
+        docker exec -t test bundle exec rake
         docker kill test
   test_3x:
     runs-on: ubuntu-18.04
@@ -38,5 +39,6 @@ jobs:
         docker exec -t test ls
         docker exec -t test which openstudio
         docker exec -t test openstudio openstudio_version
-        docker exec -t test rake
+        docker exec -t test bundle update
+        docker exec -t test bundle exec rake
         docker kill test
