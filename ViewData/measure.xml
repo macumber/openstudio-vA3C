@@ -3,8 +3,8 @@
   <schema_version>3.0</schema_version>
   <name>view_data</name>
   <uid>18cf0de7-48b8-48dc-ab68-0dd29f0b8bd0</uid>
-  <version_id>d3367668-ce69-44fe-8811-6dba70c18eb5</version_id>
-  <version_modified>20200525T162955Z</version_modified>
+  <version_id>bc508652-e41d-44de-81d7-c21b5d79a20d</version_id>
+  <version_modified>20200525T163649Z</version_modified>
   <xml_checksum>2C8A3EEF</xml_checksum>
   <class_name>ViewData</class_name>
   <display_name>ViewData</display_name>
@@ -14,9 +14,7 @@
     <argument>
       <name>file_source</name>
       <display_name>Model Source</display_name>
-      <description></description>
       <type>Choice</type>
-      <units></units>
       <required>true</required>
       <model_dependent>false</model_dependent>
       <default_value>Last OSM</default_value>
@@ -30,15 +28,11 @@
           <display_name>Last IDF</display_name>
         </choice>
       </choices>
-      <min_value></min_value>
-      <max_value></max_value>
     </argument>
     <argument>
       <name>reporting_frequency</name>
       <display_name>Reporting Frequency</display_name>
-      <description></description>
       <type>Choice</type>
-      <units></units>
       <required>true</required>
       <model_dependent>false</model_dependent>
       <default_value>Hourly</default_value>
@@ -52,44 +46,30 @@
           <display_name>Hourly</display_name>
         </choice>
       </choices>
-      <min_value></min_value>
-      <max_value></max_value>
     </argument>
     <argument>
       <name>variable1_name</name>
       <display_name>Variable 1 Name</display_name>
-      <description></description>
       <type>String</type>
-      <units></units>
       <required>true</required>
       <model_dependent>false</model_dependent>
       <default_value>Surface Outside Face Temperature</default_value>
-      <min_value></min_value>
-      <max_value></max_value>
     </argument>
     <argument>
       <name>variable2_name</name>
       <display_name>Variable 2 Name</display_name>
-      <description></description>
       <type>String</type>
-      <units></units>
       <required>true</required>
       <model_dependent>false</model_dependent>
       <default_value>Surface Inside Face Temperature</default_value>
-      <min_value></min_value>
-      <max_value></max_value>
     </argument>
     <argument>
       <name>variable3_name</name>
       <display_name>Variable 3 Name</display_name>
-      <description></description>
       <type>String</type>
-      <units></units>
       <required>true</required>
       <model_dependent>false</model_dependent>
       <default_value>Zone Mean Radiant Temperature</default_value>
-      <min_value></min_value>
-      <max_value></max_value>
     </argument>
   </arguments>
   <outputs />
@@ -129,17 +109,6 @@
       <checksum>1B6496DE</checksum>
     </file>
     <file>
-      <version>
-        <software_program>OpenStudio</software_program>
-        <identifier>1.6.3</identifier>
-        <min_compatible>1.6.3</min_compatible>
-      </version>
-      <filename>measure.rb</filename>
-      <filetype>rb</filetype>
-      <usage_type>script</usage_type>
-      <checksum>7748F9FF</checksum>
-    </file>
-    <file>
       <filename>va3c.rb</filename>
       <filetype>rb</filetype>
       <usage_type>resource</usage_type>
@@ -157,6 +126,16 @@
       <usage_type>test</usage_type>
       <checksum>FA57717A</checksum>
     </file>
+    <file>
+      <version>
+        <software_program>OpenStudio</software_program>
+        <identifier>1.6.3</identifier>
+        <min_compatible>1.6.3</min_compatible>
+      </version>
+      <filename>measure.rb</filename>
+      <filetype>rb</filetype>
+      <usage_type>script</usage_type>
+      <checksum>2D2B7411</checksum>
+    </file>
   </files>
 </measure>
-<error>wrong number of arguments (given 1, expected 0)</error>

@@ -48,7 +48,7 @@ class ViewData < OpenStudio::Ruleset::ReportingUserScript
   end
   
   #define the arguments that the user will input
-  def arguments()
+  def arguments(model)
     args = OpenStudio::Ruleset::OSArgumentVector.new
     
     chs = OpenStudio::StringVector.new
