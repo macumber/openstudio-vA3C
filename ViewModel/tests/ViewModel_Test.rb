@@ -17,7 +17,7 @@ class ViewModel_Test < MiniTest::Unit::TestCase
   end
 
   def reportPath
-    return 'output/report.json'
+    return "#{File.dirname(__FILE__)}/output/report.json"
   end
   
   # create test files if they do not exist
