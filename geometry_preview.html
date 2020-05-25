@@ -1710,10 +1710,6 @@ c);e.bind(this.domElement,"transitionend",c);e.bind(this.domElement,"oTransition
 // global variable, set in init
 var os_data;
 
-// BEGIN_REMOVE
-// configured variable, remove for deployed version with app
-var os_data_const = <%=os_data %>;
-// END_REMOVE
 
 var renderer, scene, light, scene_objects, scene_edges, object_edges, coincident_objects, back_objects;
 var perspectiveCamera, orthographicCamera, perspectiveControls, orthographicControls;
@@ -1929,11 +1925,6 @@ function drop(ev) {
   setLocalStorage('colorBarLeft', parseInt(style.left));
 }
 
-// BEGIN_REMOVE
-// remove call to init and animate when deploying with app
-init(os_data_const);
-animate();
-// END_REMOVE
 
 function parseMaterials(json) {
   var materials = {};
@@ -2869,12 +2860,6 @@ var initDatGui = function () {
   update();
 };
 
-// BEGIN_REMOVE
-// comment out to deploy in app
-document.addEventListener('DOMContentLoaded', function(event) {
-  initDatGui();
-});
-// END_REMOVE
 
 </script>
 </body>

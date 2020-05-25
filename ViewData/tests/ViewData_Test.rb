@@ -12,23 +12,23 @@ class ViewData_Test < MiniTest::Unit::TestCase
     
   # paths to expected test files, includes osm and eplusout.sql
   def modelPath
-    return './ExampleModel.osm'
+    return "#{File.dirname(__FILE__)}/ExampleModel.osm"
   end
   
   def workspacePath
-    return './output/ExampleModel/ModelToIdf/EnergyPlusPreProcess-0/out.idf'
+    return "#{File.dirname(__FILE__)}/output/ExampleModel/ModelToIdf/EnergyPlusPreProcess-0/out.idf"
   end
   
   def epwPath
-    return './USA_CO_Golden-NREL.724666_TMY3.epw'
+    return "#{File.dirname(__FILE__)}/USA_CO_Golden-NREL.724666_TMY3.epw"
   end
   
   def runDir
-    return './output/ExampleModel/'
+    return "#{File.dirname(__FILE__)}/output/ExampleModel/"
   end
   
   def sqlPath
-    return './output/ExampleModel/ModelToIdf/EnergyPlusPreProcess-0/EnergyPlus-0/eplusout.sql'
+    return "#{File.dirname(__FILE__)}/output/ExampleModel/ModelToIdf/EnergyPlusPreProcess-0/EnergyPlus-0/eplusout.sql"
   end
   
   # create test files if they do not exist
@@ -153,7 +153,7 @@ class ViewData_Test < MiniTest::Unit::TestCase
     runner = OpenStudio::Ruleset::OSRunner.new
     
     # get arguments and test that they are what we are expecting
-    arguments = measure.arguments()
+    arguments = measure.arguments(model)
     assert_equal(5, arguments.size)
   
     # create hash of argument values
@@ -229,7 +229,7 @@ class ViewData_Test < MiniTest::Unit::TestCase
     runner = OpenStudio::Ruleset::OSRunner.new
     
     # get arguments and test that they are what we are expecting
-    arguments = measure.arguments()
+    arguments = measure.arguments(model)
     assert_equal(5, arguments.size)
   
     # create hash of argument values

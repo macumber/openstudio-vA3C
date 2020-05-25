@@ -14,10 +14,11 @@ class ViewModel_Test < MiniTest::Unit::TestCase
   def modelPath
     #return "#{File.dirname(__FILE__)}/SimpleModel.osm"
     return "#{File.dirname(__FILE__)}/ExampleModel.osm"
+    #return "#{File.dirname(__FILE__)}/RotationTest.osm"
   end
 
   def reportPath
-    return 'output/report.json'
+    return "#{File.dirname(__FILE__)}/output/report.json"
   end
   
   # create test files if they do not exist
