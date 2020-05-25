@@ -1,17 +1,18 @@
+<?xml version="1.0"?>
 <measure>
   <schema_version>3.0</schema_version>
   <name>view_model</name>
   <uid>f4669f10-fda5-489d-8e1c-7ca3c2d40378</uid>
-  <version_id>7a8a6514-8dce-4565-b5d4-6d65dc424f77</version_id>
-  <version_modified>20170406T053403Z</version_modified>
+  <version_id>9708f92b-9860-44ff-bdb1-7284ce179903</version_id>
+  <version_modified>20200525T162955Z</version_modified>
   <xml_checksum>1E1F8B97</xml_checksum>
   <class_name>ViewModel</class_name>
   <display_name>ViewModel</display_name>
   <description>Visualize an OpenStudio model in a web based viewer</description>
   <modeler_description>Converts the OpenStudio model to vA3C JSON format and renders using Three.js</modeler_description>
-  <arguments/>
-  <outputs/>
-  <provenances/>
+  <arguments />
+  <outputs />
+  <provenances />
   <tags>
     <tag>Reporting.QAQC</tag>
   </tags>
@@ -41,12 +42,6 @@
       <checksum>10636DB9</checksum>
     </file>
     <file>
-      <filename>ViewModel_Test.rb</filename>
-      <filetype>rb</filetype>
-      <usage_type>test</usage_type>
-      <checksum>705A2705</checksum>
-    </file>
-    <file>
       <version>
         <software_program>OpenStudio</software_program>
         <identifier>1.6.3</identifier>
@@ -68,6 +63,12 @@
       <filetype>in</filetype>
       <usage_type>resource</usage_type>
       <checksum>9E373859</checksum>
+    </file>
+    <file>
+      <filename>ViewModel_Test.rb</filename>
+      <filetype>rb</filetype>
+      <usage_type>test</usage_type>
+      <checksum>540430CC</checksum>
     </file>
   </files>
 </measure>
