@@ -1,23 +1,17 @@
-<?xml version="1.0"?>
 <measure>
   <schema_version>3.0</schema_version>
   <name>view_model</name>
   <uid>f4669f10-fda5-489d-8e1c-7ca3c2d40378</uid>
-<<<<<<< HEAD
-  <version_id>9708f92b-9860-44ff-bdb1-7284ce179903</version_id>
-  <version_modified>20200525T162955Z</version_modified>
-=======
-  <version_id>1b2e09f3-cd7a-4857-94cf-408ee5df58a0</version_id>
-  <version_modified>20190824T180201Z</version_modified>
->>>>>>> remotes/origin/updates
+  <version_id>344a94f9-eef7-44c9-88c5-90f5656d8dc0</version_id>
+  <version_modified>20200526T042251Z</version_modified>
   <xml_checksum>1E1F8B97</xml_checksum>
   <class_name>ViewModel</class_name>
   <display_name>ViewModel</display_name>
   <description>Visualize an OpenStudio model in a web based viewer</description>
   <modeler_description>Converts the OpenStudio model to vA3C JSON format and renders using Three.js</modeler_description>
-  <arguments />
-  <outputs />
-  <provenances />
+  <arguments/>
+  <outputs/>
+  <provenances/>
   <tags>
     <tag>Reporting.QAQC</tag>
   </tags>
@@ -45,24 +39,6 @@
       <filetype>osm</filetype>
       <usage_type>test</usage_type>
       <checksum>10636DB9</checksum>
-    </file>
-    <file>
-<<<<<<< HEAD
-      <version>
-        <software_program>OpenStudio</software_program>
-        <identifier>1.6.3</identifier>
-        <min_compatible>1.6.3</min_compatible>
-      </version>
-      <filename>measure.rb</filename>
-      <filetype>rb</filetype>
-      <usage_type>script</usage_type>
-      <checksum>656ECCCB</checksum>
-=======
-      <filename>ViewModel_Test.rb</filename>
-      <filetype>rb</filetype>
-      <usage_type>test</usage_type>
-      <checksum>D27B86CD</checksum>
->>>>>>> remotes/origin/updates
     </file>
     <file>
       <filename>va3c.rb</filename>
@@ -97,7 +73,7 @@
       <filename>ViewModel_Test.rb</filename>
       <filetype>rb</filetype>
       <usage_type>test</usage_type>
-      <checksum>540430CC</checksum>
+      <checksum>71B0E6EF</checksum>
     </file>
   </files>
 </measure>
