@@ -1,15 +1,9 @@
-<?xml version="1.0"?>
 <measure>
   <schema_version>3.0</schema_version>
   <name>view_data</name>
   <uid>18cf0de7-48b8-48dc-ab68-0dd29f0b8bd0</uid>
-<<<<<<< HEAD
-  <version_id>bc508652-e41d-44de-81d7-c21b5d79a20d</version_id>
-  <version_modified>20200525T163649Z</version_modified>
-=======
-  <version_id>6ad1aae4-c89f-4bb8-98e8-803f1917d21c</version_id>
-  <version_modified>20190824T213203Z</version_modified>
->>>>>>> remotes/origin/updates
+  <version_id>8f275e37-fc42-46c2-af50-2e48834d73b6</version_id>
+  <version_modified>20200526T042251Z</version_modified>
   <xml_checksum>2C8A3EEF</xml_checksum>
   <class_name>ViewData</class_name>
   <display_name>ViewData</display_name>
@@ -77,8 +71,8 @@
       <default_value>Zone Mean Radiant Temperature</default_value>
     </argument>
   </arguments>
-  <outputs />
-  <provenances />
+  <outputs/>
+  <provenances/>
   <tags>
     <tag>Reporting.QAQC</tag>
   </tags>
@@ -114,15 +108,6 @@
       <checksum>1B6496DE</checksum>
     </file>
     <file>
-<<<<<<< HEAD
-=======
-      <filename>ViewData_Test.rb</filename>
-      <filetype>rb</filetype>
-      <usage_type>test</usage_type>
-      <checksum>EA9EEFB9</checksum>
-    </file>
-    <file>
->>>>>>> remotes/origin/updates
       <filename>va3c.rb</filename>
       <filetype>rb</filetype>
       <usage_type>resource</usage_type>
@@ -135,16 +120,10 @@
       <checksum>61B6B47E</checksum>
     </file>
     <file>
-      <version>
-        <software_program>OpenStudio</software_program>
-        <identifier>1.6.3</identifier>
-        <min_compatible>1.6.3</min_compatible>
-      </version>
-      <filename>measure.rb</filename>
+      <filename>ViewData_Test.rb</filename>
       <filetype>rb</filetype>
-<<<<<<< HEAD
       <usage_type>test</usage_type>
-      <checksum>FA57717A</checksum>
+      <checksum>2693B36A</checksum>
     </file>
     <file>
       <version>
@@ -155,11 +134,7 @@
       <filename>measure.rb</filename>
       <filetype>rb</filetype>
       <usage_type>script</usage_type>
-      <checksum>2D2B7411</checksum>
-=======
-      <usage_type>script</usage_type>
-      <checksum>F4A6F83E</checksum>
->>>>>>> remotes/origin/updates
+      <checksum>8BCF7932</checksum>
     </file>
   </files>
 </measure>
