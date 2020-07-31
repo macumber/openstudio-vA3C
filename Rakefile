@@ -41,8 +41,9 @@ task :build do
 
       if md = /<script\s*src=\"(.*?)\"><\/script>/.match(line)
         url = md[1].gsub('https', 'http')
-        request = RestClient::Resource.new(url)
-        response = request.get
+        #request = RestClient::Resource.new(url)
+        #response = request.get
+        response = RestClient::Request.execute(:method => :head, :url => url, :verify_ssl => OpenSSL::SSL::VERIFY_NONE)
         line = "<script>#{response}</script>\n"
       end
       
